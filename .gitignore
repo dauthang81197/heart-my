@@ -1,7 +1,7 @@
 node_modules
 dist
 .env
-uploads
+/api/uploads/
 *.log
 
 # BMAD / Claude tooling
