@@ -9,6 +9,7 @@ services:
     volumes: [pgdata:/var/lib/postgresql/data]
     healthcheck: { test: ["CMD-SHELL", "pg_isready -U heartpost"], interval: 5s, retries: 10 }
   api:
+    image: ${DOCKERHUB_USERNAME:-local}/heartpost-api:${IMAGE_TAG:-latest}
     build: ./api
     restart: always
     env_file: .env
@@ -18,6 +19,7 @@ services:
     volumes: [uploads:/app/uploads]
     depends_on: { db: { condition: service_healthy } }
   web:
+    image: ${DOCKERHUB_USERNAME:-local}/heartpost-web:${IMAGE_TAG:-latest}
     build:
       context: ./web
       args: { VITE_GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID}" }

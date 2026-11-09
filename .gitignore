@@ -3,3 +3,8 @@ dist
 .env
 uploads
 *.log
+
+# BMAD / Claude tooling
+_bmad/
+_bmad-output/
+.claude/

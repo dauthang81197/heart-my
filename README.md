@@ -11,12 +11,16 @@ cd ../web && echo VITE_GOOGLE_CLIENT_ID=... > .env && npm i && npm run dev   # h
 ```
 Dev: nút "[DEV] Giả lập đã thanh toán" trong màn VietQR (cần ALLOW_MOCK_PAY=true).
 
-## Deploy (VPS Linux + GitHub Actions)
-1. VPS: cài Docker + compose, tạo thư mục, đặt file `.env` (theo `.env.example`) trong thư mục đó.
-2. GitHub Secrets: `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `VPS_PATH`.
-3. Push lên `main` → build, scp, `docker compose up -d --build` (migrate + seed tự chạy khi api khởi động).
-4. HTTPS: Caddy đã có trong compose. Khi có domain, trỏ DNS A về IP VPS, đặt `SITE_ADDRESS=domain` và `WEB_URL=https://domain` trong `.env` rồi chạy lại `docker compose up -d`; Caddy tự cấp chứng chỉ. Mở cổng 80/443.
+## Deploy (VPS Linux + GitHub Actions + Docker Hub)
+Luồng: push `main` → CI build/test → build & push image `heartpost-api`, `heartpost-web` lên Docker Hub (tag `latest` + SHA commit) → SSH vào VPS, `docker compose pull` rồi `up -d`.
+1. VPS: cài Docker + compose, tạo thư mục (= `VPS_PATH`), đặt file `.env` (theo `.env.example`) trong thư mục đó.
+2. Docker Hub: tạo Access Token (Account Settings → Security) quyền Read & Write.
+3. GitHub Secrets: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, `GOOGLE_CLIENT_ID` (nhúng vào web lúc build), `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `VPS_PATH`.
+4. Push lên `main` (hoặc chạy tay: Actions → CI/CD → Run workflow). Migrate + seed tự chạy khi api khởi động.
+5. HTTPS: Caddy đã có trong compose. Khi có domain, trỏ DNS A về IP VPS, đặt `SITE_ADDRESS=domain` và `WEB_URL=https://domain` trong `.env` rồi chạy lại `docker compose up -d`; Caddy tự cấp chứng chỉ. Mở cổng 80/443.
    Chưa có domain: giữ `SITE_ADDRESS=:80` (HTTP theo IP).
+Rollback: trên VPS `IMAGE_TAG=<sha cũ> DOCKERHUB_USERNAME=<user> docker compose up -d`. Image build cho `linux/amd64`.
+Build local không cần Docker Hub: `docker compose up -d --build`.
 
 ## SePay (VietQR tự xác nhận)
 Webhook URL: `https://<domain>/api/orders/webhook/sepay`, kiểu xác thực API Key = `SEPAY_API_KEY`. Nội dung CK chứa mã đơn `HPxxxxxxxx`.

@@ -2,41 +2,91 @@ name: CI/CD
 on:
   push: { branches: [main] }
   pull_request:
+  workflow_dispatch:
+
+env:
+  API_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/heartpost-api
+  WEB_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/heartpost-web
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 22 }
+        with: { node-version: 22, cache: npm, cache-dependency-path: "api/package-lock.json\nweb/package-lock.json" }
       - name: API build
         working-directory: api
         run: npm ci && npx prisma generate && npm run build
       - name: Web build
         working-directory: web
         run: npm ci && npm run build
-  deploy:
+
+  docker:
     needs: build
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Upload source to VPS
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build & push API
+        uses: docker/build-push-action@v6
+        with:
+          context: ./api
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.API_IMAGE }}:latest
+            ${{ env.API_IMAGE }}:${{ github.sha }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,scope=api,mode=max
+      - name: Build & push Web
+        uses: docker/build-push-action@v6
+        with:
+          context: ./web
+          platforms: linux/amd64
+          push: true
+          build-args: VITE_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          tags: |
+            ${{ env.WEB_IMAGE }}:latest
+            ${{ env.WEB_IMAGE }}:${{ github.sha }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,scope=web,mode=max
+
+  deploy:
+    needs: docker
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upload compose files to VPS
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          source: "api,web,docker-compose.yml,Caddyfile"
+          source: "docker-compose.yml,Caddyfile"
           target: ${{ secrets.VPS_PATH }}
-          rm: false
-      - name: Build & restart
+      - name: Pull & restart
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          IMAGE_TAG: ${{ github.sha }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          envs: DOCKERHUB_USERNAME,DOCKERHUB_TOKEN,IMAGE_TAG
           script: |
+            set -e
             cd ${{ secrets.VPS_PATH }}
-            docker compose up -d --build
+            echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            export DOCKERHUB_USERNAME IMAGE_TAG
+            docker compose pull api web
+            docker compose up -d --remove-orphans
             docker image prune -f
