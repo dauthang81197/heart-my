@@ -1,0 +1,5 @@
+# SITE_ADDRESS=":80" khi chưa có domain (HTTP theo IP); đổi thành "ten-mien.com" để Caddy tự cấp HTTPS.
+{$SITE_ADDRESS::80} {
+	encode gzip
+	reverse_proxy web:80
+}

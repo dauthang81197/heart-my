@@ -1,0 +1,101 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum LetterType {
+  PRIVATE
+  PUBLIC
+  FUTURE
+}
+
+enum LetterStatus {
+  DRAFT
+  SCHEDULED
+  SENT
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  EXPIRED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  avatar       String?
+  passwordHash String?
+  googleId     String?  @unique
+  locale       String   @default("vi")
+  role         String   @default("USER")
+  createdAt    DateTime @default(now())
+  letters      Letter[]
+  stamps       UserStamp[]
+  orders       Order[]
+}
+
+model Stamp {
+  id        String   @id @default(cuid())
+  name      String
+  image     String // emoji hoặc url
+  color     String   @default("#8aa4b5")
+  price     Int // VND / tem
+  active    Boolean  @default(true)
+  owned     UserStamp[]
+  letters   Letter[]
+}
+
+model UserStamp {
+  id       String @id @default(cuid())
+  userId   String
+  stampId  String
+  quantity Int    @default(0)
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stamp    Stamp  @relation(fields: [stampId], references: [id])
+
+  @@unique([userId, stampId])
+}
+
+model Letter {
+  id             String       @id @default(cuid())
+  authorId       String
+  type           LetterType
+  status         LetterStatus @default(DRAFT)
+  title          String       @default("")
+  recipientName  String?
+  recipientEmail String?
+  deliverAt      DateTime?
+  envelope       String       @default("classic")
+  design         Json         @default("{}")
+  stampId        String?
+  shareToken     String       @unique @default(cuid())
+  sentAt         DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  author         User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  stamp          Stamp?       @relation(fields: [stampId], references: [id])
+
+  @@index([authorId])
+  @@index([status, deliverAt])
+}
+
+model Order {
+  id         String      @id @default(cuid())
+  code       String      @unique // nội dung chuyển khoản, vd HP7K2X9A
+  userId     String
+  stampId    String
+  quantity   Int
+  amount     Int
+  status     OrderStatus @default(PENDING)
+  providerTx String?     @unique
+  paidAt     DateTime?
+  expiresAt  DateTime
+  createdAt  DateTime    @default(now())
+  user       User        @relation(fields: [userId], references: [id])
+}

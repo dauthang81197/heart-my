@@ -1,0 +1,112 @@
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { LetterStatus, LetterType, Prisma } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.module';
+import { MailService } from '../mail/mail.module';
+
+@Injectable()
+export class LettersService {
+  constructor(private prisma: PrismaService, private mail: MailService) {}
+
+  private async own(userId: string, id: string) {
+    const l = await this.prisma.letter.findUnique({ where: { id } });
+    if (!l) throw new NotFoundException();
+    if (l.authorId !== userId) throw new ForbiddenException();
+    return l;
+  }
+
+  create(userId: string, type: LetterType) {
+    return this.prisma.letter.create({ data: { authorId: userId, type } });
+  }
+
+  list(userId: string) {
+    return this.prisma.letter.findMany({
+      where: { authorId: userId }, orderBy: { updatedAt: 'desc' }, include: { stamp: true },
+    });
+  }
+
+  async inbox(email: string) {
+    return this.prisma.letter.findMany({
+      where: { recipientEmail: email.toLowerCase(), status: LetterStatus.SENT },
+      orderBy: { sentAt: 'desc' }, include: { author: { select: { name: true, avatar: true } }, stamp: true },
+    });
+  }
+
+  get(userId: string, id: string) { return this.own(userId, id); }
+
+  async update(userId: string, id: string, data: Prisma.LetterUncheckedUpdateInput) {
+    const l = await this.own(userId, id);
+    if (l.status !== LetterStatus.DRAFT) throw new BadRequestException('Thư đã gửi, không thể sửa');
+    return this.prisma.letter.update({ where: { id }, data });
+  }
+
+  async remove(userId: string, id: string) {
+    await this.own(userId, id);
+    await this.prisma.letter.delete({ where: { id } });
+    return { ok: true };
+  }
+
+  /** Gửi thư: bắt buộc có tem, trừ 1 tem trong kho (atomic). */
+  async send(userId: string, id: string, stampId: string) {
+    const l = await this.own(userId, id);
+    if (l.status !== LetterStatus.DRAFT) throw new BadRequestException('Thư đã được gửi');
+    if (l.type === LetterType.PRIVATE && !l.recipientEmail) throw new BadRequestException('Thiếu email người nhận');
+    if (l.type === LetterType.FUTURE) {
+      if (!l.recipientEmail) throw new BadRequestException('Thiếu email người nhận');
+      if (!l.deliverAt || l.deliverAt.getTime() < Date.now() + 60_000) throw new BadRequestException('Ngày gửi phải ở tương lai');
+    }
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const r = await tx.userStamp.updateMany({
+        where: { userId, stampId, quantity: { gt: 0 } }, data: { quantity: { decrement: 1 } },
+      });
+      if (r.count === 0) throw new BadRequestException('Bạn chưa có tem này. Hãy mua tem trước khi gửi.');
+      return tx.letter.update({
+        where: { id },
+        data: {
+          stampId,
+          status: l.type === LetterType.FUTURE ? LetterStatus.SCHEDULED : LetterStatus.SENT,
+          sentAt: l.type === LetterType.FUTURE ? null : new Date(),
+        },
+      });
+    });
+    if (updated.status === LetterStatus.SENT) await this.notify(updated.id);
+    return updated;
+  }
+
+  private async notify(id: string) {
+    const l = await this.prisma.letter.findUnique({ where: { id }, include: { author: true } });
+    if (!l?.recipientEmail) return;
+    const link = `${process.env.WEB_URL?.split(',')[0] ?? ''}/l/${l.shareToken}`;
+    await this.mail.letterReceived(l.recipientEmail, l.author.name, link).catch(() => undefined);
+  }
+
+  publicFeed() {
+    return this.prisma.letter.findMany({
+      where: { type: LetterType.PUBLIC, status: LetterStatus.SENT },
+      orderBy: { sentAt: 'desc' }, take: 50,
+      select: { shareToken: true, title: true, envelope: true, design: true, sentAt: true, author: { select: { name: true } }, stamp: true },
+    });
+  }
+
+  async viewByToken(token: string) {
+    const l = await this.prisma.letter.findUnique({
+      where: { shareToken: token }, include: { author: { select: { name: true, avatar: true } }, stamp: true },
+    });
+    if (!l || l.status !== LetterStatus.SENT) throw new NotFoundException('Thư không tồn tại hoặc chưa đến ngày gửi');
+    return l;
+  }
+
+  /** Mỗi phút: giao các thư hẹn giờ đã đến hạn. */
+  @Cron(CronExpression.EVERY_MINUTE)
+  async deliverScheduled() {
+    const due = await this.prisma.letter.findMany({
+      where: { status: LetterStatus.SCHEDULED, deliverAt: { lte: new Date() } }, select: { id: true },
+    });
+    for (const { id } of due) {
+      const r = await this.prisma.letter.updateMany({
+        where: { id, status: LetterStatus.SCHEDULED }, data: { status: LetterStatus.SENT, sentAt: new Date() },
+      });
+      if (r.count) await this.notify(id);
+    }
+  }
+}

@@ -1,0 +1,34 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: heartpost
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: heartpost
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U heartpost"], interval: 5s, retries: 10 }
+  api:
+    build: ./api
+    restart: always
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://heartpost:${DB_PASSWORD}@db:5432/heartpost
+      NODE_ENV: production
+    volumes: [uploads:/app/uploads]
+    depends_on: { db: { condition: service_healthy } }
+  web:
+    build:
+      context: ./web
+      args: { VITE_GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID}" }
+    restart: always
+    depends_on: [api]
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    ports: ["80:80", "443:443"]
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    volumes: [./Caddyfile:/etc/caddy/Caddyfile:ro, caddy_data:/data, caddy_config:/config]
+    depends_on: [web]
+volumes: { pgdata: {}, uploads: {}, caddy_data: {}, caddy_config: {} }
