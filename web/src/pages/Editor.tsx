@@ -3,12 +3,13 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { api, Letter, uploadFile } from '../api';
 import {
   Design, ENV_COLORS, ENV_PATTERNS, Item, MODELS, nameOf, normalizeDesign, PAPER_COLORS, PAPER_KINDS, PAPER_PATTERNS,
-  SEAL_COLORS, SEAL_EMBLEMS, W,
+  SEAL_COLORS, SEAL_EMBLEMS, W, pageCount,
 } from '../design';
 import LetterCanvas from '../components/LetterCanvas';
 import Envelope from '../components/Envelope';
 import AppHeader from '../components/AppHeader';
 import AudioRecorder from '../components/AudioRecorder';
+import { MAX_BYTES, MAX_PAGES, processHandwriting } from '../handwriting';
 import { Spinner, useUI } from '../components/UI';
 
 const FONTS = ['Dancing Script', 'Caveat', 'Playfair Display', 'Inter', 'Be Vietnam Pro', 'Georgia', 'Courier New'];
@@ -22,7 +23,7 @@ const SUBS: Record<Step, [string, string][]> = {
   env: [['model', 'Mẫu mã'], ['pattern', 'Họa tiết'], ['color', 'Màu sắc']],
   seal: [['color', 'Màu sáp'], ['emblem', 'Biểu tượng']],
   paper: [['kind', 'Loại giấy'], ['pattern', 'Họa tiết'], ['color', 'Màu giấy']],
-  content: [['hand', 'Chữ viết tay'], ['photos', 'Ảnh đính kèm'], ['audio', 'Ghi âm']],
+  content: [['hand', 'Chữ viết tay'], ['text', 'Soạn thảo'], ['photos', 'Ảnh đính kèm'], ['audio', 'Ghi âm']],
 };
 
 function Card({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) {
@@ -39,6 +40,8 @@ export default function Editor() {
   const [step, setStep] = useState<Step>('env');
   const [sub, setSub] = useState<Record<Step, string>>({ env: 'model', seal: 'color', paper: 'kind', content: 'hand' });
   const [open, setOpen] = useState(false);
+  const [pg, setPg] = useState(0);
+  const [handBusy, setHandBusy] = useState('');
   const [pulled, setPulled] = useState(false);
   const [full, setFull] = useState(false);
   const [grid, setGrid] = useState(true);
@@ -58,7 +61,7 @@ export default function Editor() {
       if (l.status !== 'DRAFT') return nav('/app/vault', { replace: true });
       const d = normalizeDesign(l.design, l.envelope);
       setLetter(l); setTitle(l.title); setDesign(d);
-      if (d.items.length || d.images.length || d.audios.length || l.title) setStep('content');
+      if (d.items.length || d.pages.length || d.images.length || d.audios.length || l.title) setStep('content');
       loaded.current = true;
     }).catch(() => nav('/app'));
   }, [id]);
@@ -90,7 +93,7 @@ export default function Editor() {
 
   const set = (patch: Partial<Design>) => commit({ ...design, ...patch });
   const add = (it: Partial<Item> & Pick<Item, 'type'>) => {
-    const item = { id: uid(), x: 90, y: 120 + (design.items.length % 6) * 50, ...it } as Item;
+    const item = { id: uid(), page: pg, x: 90, y: 120 + (design.items.length % 6) * 50, ...it } as Item;
     commit({ ...design, items: [...design.items, item] }); setSel(item.id); setTool('select');
   };
   const selected = design.items.find((i) => i.id === sel);
@@ -117,6 +120,31 @@ export default function Editor() {
       if (asItem) add({ type: 'image', src: urls[0], width: 240, height: 240 });
       else commit({ ...d, images: [...d.images, ...urls] });
     } catch (e: any) { toast(e.message, 'error'); } finally { setBusy(false); }
+  };
+
+  const addHandPages = async (files: FileList | File[] | null) => {
+    const list = Array.from(files ?? []); if (!list.length) return;
+    const room = MAX_PAGES - design.pages.length;
+    if (room <= 0) return toast(`Tối đa ${MAX_PAGES} trang`, 'error');
+    if (list.length > room) toast(`Chỉ thêm được ${room} trang nữa, bỏ bớt ảnh thừa`, 'error');
+    const urls: string[] = [];
+    try {
+      const picked = list.slice(0, room);
+      for (let i = 0; i < picked.length; i++) {
+        const f = picked[i];
+        if (!/^image\/(png|jpe?g|webp)$/.test(f.type)) { toast(`${f.name}: chỉ nhận JPG, PNG`, 'error'); continue; }
+        if (f.size > MAX_BYTES) { toast(`${f.name}: vượt quá 5MB`, 'error'); continue; }
+        setHandBusy(`Đang xử lý ảnh ${i + 1}/${picked.length}…`);
+        const blob = await processHandwriting(f);
+        urls.push((await uploadFile(blob, `hand-${Date.now()}.png`)).url);
+      }
+      if (urls.length) { commit({ ...design, pages: [...design.pages, ...urls] }); setPg(design.pages.length); setSel(null); toast(`Đã thêm ${urls.length} trang`); }
+    } catch (e: any) { toast(e.message, 'error'); } finally { setHandBusy(''); }
+  };
+  const removePage = (i: number) => {
+    const items = design.items.filter((it) => (it.page ?? 0) !== i).map((it) => ((it.page ?? 0) > i ? { ...it, page: (it.page ?? 0) - 1 } : it));
+    commit({ ...design, pages: design.pages.filter((_, j) => j !== i), pageInk: design.pageInk.filter((_, j) => j !== i), items });
+    setPg((p) => Math.max(0, Math.min(p, design.pages.length - 2))); setSel(null);
   };
 
   const goSend = async () => {
@@ -157,13 +185,53 @@ export default function Editor() {
         {busy && <span className="muted"> Đang tải lên…</span>}
         <div className="thumbs">{design.images.map((u, i) => <div key={u} className="thumb"><img src={u} alt="" /><button onClick={() => set({ images: design.images.filter((_, j) => j !== i) })}>✕</button></div>)}</div>
       </div>);
+    if (s === 'hand') return (
+      <div className="pad">
+        <div className="muted" style={{ fontSize: '.85rem', marginBottom: 10 }}>{design.pages.length}/{MAX_PAGES} trang đã thêm</div>
+        {design.pages.length < MAX_PAGES && (
+          <label className={'dropzone' + (handBusy ? ' busy' : '')}
+            onDragOver={(ev) => ev.preventDefault()} onDrop={(ev) => { ev.preventDefault(); if (!handBusy) addHandPages(ev.dataTransfer.files); }}>
+            <span className="plus">{handBusy ? <i className="spinner" /> : '＋'}</span>
+            <b>{handBusy || 'Tải ảnh chữ viết của bạn'}</b>
+            <span className="muted">JPG, PNG · Tối đa 5MB · Mỗi ảnh là 1 trang thư · Chọn nhiều ảnh một lúc</span>
+            <input type="file" accept="image/png,image/jpeg,image/webp" multiple hidden disabled={!!handBusy}
+              onChange={(ev) => { addHandPages(ev.target.files); ev.target.value = ''; }} />
+          </label>)}
+        {design.pages.length > 0 && <>
+          <h4>Màu chữ — Trang {Math.min(pg, design.pages.length - 1) + 1}</h4>
+          {(() => {
+            const cur = Math.min(pg, design.pages.length - 1); const ink = design.pageInk[cur] ?? null;
+            const setInk = (c: string | null, all = false) => {
+              const arr = design.pages.map((_, i) => (all || i === cur ? c : design.pageInk[i] ?? null));
+              commit({ ...design, pageInk: arr });
+            };
+            return <>
+              <div className="row">
+                <button className={'chip t' + (!ink ? ' on' : '')} onClick={() => setInk(null)}>Màu gốc</button>
+                {INKS.map((c) => <span key={c} className={'swatch' + (ink === c ? ' on' : '')} style={{ background: c }} onClick={() => setInk(c)} />)}
+                <label className="swatch custom" title="Chọn màu khác" style={{ background: ink && !INKS.includes(ink) ? ink : undefined }}>
+                  <input type="color" value={ink ?? '#1f2328'} onChange={(ev) => setInk(ev.target.value)} /></label>
+              </div>
+              {design.pages.length > 1 && <button className="btn ghost sm" style={{ marginTop: 8 }} onClick={() => setInk(ink, true)}>Áp dụng màu này cho mọi trang</button>}
+            </>;
+          })()}
+          <h4>Các trang</h4>
+          <div className="pagelist">{design.pages.map((u, i) => (
+            <div key={u} className={'pagethumb' + (pg === i ? ' on' : '')} onClick={() => setPg(i)}>
+              <div className="pt-img"><img src={u} alt="" /></div>
+              <span>Trang {i + 1}</span>
+              <button title="Xoá trang" onClick={async (ev) => { ev.stopPropagation(); if (await confirm({ message: `Xoá trang ${i + 1}?`, danger: true, okText: 'Xoá' })) removePage(i); }}>✕</button>
+            </div>))}</div>
+        </>}
+        <p className="muted" style={{ fontSize: '.82rem', marginTop: 14 }}>Ảnh tự co vừa khổ giấy và tách nền trắng để chữ nằm trên màu giấy bạn chọn; bạn có thể đổi màu chữ ở trên. Chụp thẳng, đủ sáng sẽ cho kết quả đẹp nhất. Vào <b>Soạn thảo</b> để thêm sticker, chữ, nét vẽ lên từng trang.</p>
+      </div>);
     if (s === 'audio') return (
       <div className="pad">
         <p className="muted">Ghi một lời nhắn bằng giọng nói, người nhận sẽ nghe được khi mở thư. Tối đa 3 bản ghi.</p>
         <AudioRecorder disabled={design.audios.length >= 3} onSaved={(a) => commit({ ...design, audios: [...design.audios, a] })} />
         {design.audios.map((a, i) => <div key={a.url} className="aud"><audio controls src={a.url} preload="metadata" /><button className="btn danger sm" onClick={() => set({ audios: design.audios.filter((_, j) => j !== i) })}>Xoá</button></div>)}
       </div>);
-    // hand
+    // text (soạn thảo)
     return (
       <div className="pad">
         <h4>Thêm vào lá thư</h4>
@@ -221,7 +289,10 @@ export default function Editor() {
           </div>
           <div className="stage">
             {step === 'content'
-              ? <LetterCanvas design={design} width={cw} editable tool={tool} brush={brush} selectedId={sel} onSelect={setSel} onChange={onCanvas} />
+              ? <div style={{ display: 'grid', gap: 10, justifyItems: 'center' }}>
+                  {pageCount(design) > 1 && <div className="pagetabs">{Array.from({ length: pageCount(design) }, (_, i) => <button key={i} className={pg === i ? 'on' : ''} onClick={() => { setPg(i); setSel(null); }}>Trang {i + 1}</button>)}</div>}
+                  <LetterCanvas design={design} width={cw} page={Math.min(pg, pageCount(design) - 1)} editable tool={tool} brush={brush} selectedId={sel} onSelect={setSel} onChange={onCanvas} />
+                </div>
               : <div style={{ marginTop: open ? envSize * 0.45 : 0, transition: 'margin .5s' }}><Envelope design={design} open={open} pulled={pulled} size={envSize} paper={paperEl} onClick={() => { if (pulled) setPulled(false); else setOpen(!open); }} onPaperClick={() => setPulled(!pulled)} /></div>}
           </div>
           <div className="infobar">

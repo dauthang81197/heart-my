@@ -2,7 +2,7 @@ export const W = 600, H = 800;
 
 export type Item = {
   id: string; type: 'text' | 'sticker' | 'image' | 'line';
-  x: number; y: number; rotation?: number;
+  x: number; y: number; rotation?: number; page?: number;
   text?: string; fontFamily?: string; fontSize?: number; fill?: string; bold?: boolean; italic?: boolean; align?: string; width?: number;
   src?: string; height?: number;
   points?: number[]; stroke?: string; strokeWidth?: number;
@@ -12,6 +12,8 @@ export type Seal = { color: string; emblem: string };
 export type PaperDesign = { kind: string; color: string; pattern: string };
 export type Design = {
   env: EnvDesign; seal: Seal; paper: PaperDesign; items: Item[];
+  pageInk: (string | null)[]; // màu mực đổi lại cho từng trang (null = màu gốc)
+  pages: string[]; // ảnh chữ viết tay, mỗi ảnh là 1 trang (PNG đã fit khổ giấy)
   images: string[]; audios: { url: string; duration: number }[];
 };
 
@@ -66,7 +68,7 @@ export const defaultDesign = (): Design => ({
   env: { model: 'classic', pattern: 'none', color: ENV_COLORS[0].c },
   seal: { color: SEAL_COLORS[1].c, emblem: '❤' },
   paper: { kind: 'ford', color: PAPER_COLORS[0].c, pattern: 'lined' },
-  items: [], images: [], audios: [],
+  items: [], pages: [], pageInk: [], images: [], audios: [],
 });
 
 /** Chuẩn hoá design từ server (có thể thiếu field / định dạng cũ). */
@@ -78,8 +80,11 @@ export function normalizeDesign(raw: any, legacyEnvelope?: string): Design {
     seal: { ...d.seal, ...(raw.seal ?? {}) },
     paper: { ...d.paper, ...(raw.paper ?? {}) },
     items: Array.isArray(raw.items) ? raw.items : [],
+    pageInk: Array.isArray(raw.pageInk) ? raw.pageInk.map((c: unknown) => (typeof c === 'string' ? c : null)) : [],
+    pages: Array.isArray(raw.pages) ? raw.pages.filter((u: unknown) => typeof u === 'string') : [],
     images: Array.isArray(raw.images) ? raw.images : [],
     audios: Array.isArray(raw.audios) ? raw.audios : [],
   };
 }
+export const pageCount = (d: { pages?: string[] }) => Math.max(1, d.pages?.length ?? 0);
 export const nameOf = (list: { k?: string; c?: string; n: string }[], v: string) => list.find((x) => x.k === v || x.c === v)?.n ?? '—';

@@ -4,7 +4,7 @@ import { api, Letter } from '../api';
 import Envelope from '../components/Envelope';
 import { Spinner } from '../components/UI';
 import LetterCanvas from '../components/LetterCanvas';
-import { normalizeDesign, W } from '../design';
+import { normalizeDesign, pageCount, W } from '../design';
 
 export default function ViewLetter() {
   const { token } = useParams();
@@ -31,7 +31,7 @@ export default function ViewLetter() {
       </div>
       {!open && <p className="muted">Chạm vào phong bì để mở</p>}
       {show && <div className="reveal">
-        <div style={{ display: 'grid', placeItems: 'center' }}><LetterCanvas design={d} width={cw} /></div>
+        <div style={{ display: 'grid', placeItems: 'center', gap: 22 }}>{Array.from({ length: pageCount(d) }, (_, i) => <div key={i} className="reveal" style={{ animationDelay: `${i * 0.35}s` }}><LetterCanvas design={d} width={cw} page={i} />{pageCount(d) > 1 && <div className="muted" style={{ fontSize: '.8rem', marginTop: 8 }}>Trang {i + 1}/{pageCount(d)}</div>}</div>)}</div>
         {d.images.length > 0 && <div className="gallery">{d.images.map((u) => <a key={u} href={u} target="_blank" rel="noreferrer"><img src={u} alt="" /></a>)}</div>}
         {d.audios.map((a) => <div key={a.url} className="aud" style={{ justifyContent: 'center' }}>🎙 <audio controls src={a.url} preload="metadata" /></div>)}
       </div>}

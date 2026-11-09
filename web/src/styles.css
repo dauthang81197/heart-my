@@ -231,3 +231,19 @@ input[type=range] { accent-color:var(--acc); }
 /* Lá thư được rút hẳn ra khỏi phong bì: nhẹ nhàng bồng bềnh */
 .paper-pulled { animation:paperFloat 4s ease-in-out 1s infinite; }
 @keyframes paperFloat { 50% { translate:0 -7px; } }
+
+/* ---------- Tải ảnh chữ viết tay ---------- */
+.dropzone { display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center; padding:34px 18px; border:2px dashed var(--line); border-radius:22px; cursor:pointer; transition:border-color .15s, background .15s; }
+.dropzone:hover { border-color:var(--acc); background:var(--acc-soft); } .dropzone.busy { cursor:progress; opacity:.85; }
+.dropzone .plus { width:58px; height:58px; border-radius:50%; border:1px solid var(--line); display:grid; place-items:center; font-size:1.6rem; color:var(--mut); margin-bottom:6px; }
+.dropzone .muted { font-size:.82rem; line-height:1.5; }
+label.check { display:flex; gap:8px; align-items:center; margin-top:12px; color:var(--mut); font-size:.85rem; cursor:pointer; } label.check input { accent-color:var(--acc); }
+.pagelist { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.pagethumb { position:relative; text-align:center; font-size:.8rem; color:var(--mut); cursor:pointer; border:1px solid var(--line); border-radius:12px; padding:8px 8px 6px; background:var(--bg3); }
+.pagethumb.on { border-color:var(--acc); color:var(--fg); }
+.pt-img { aspect-ratio:3/4; background:#f7f2e8; border-radius:6px; overflow:hidden; margin-bottom:6px; } .pt-img img { width:100%; height:100%; object-fit:contain; display:block; }
+.pagethumb button { position:absolute; right:4px; top:4px; width:24px; height:24px; border-radius:50%; border:0; background:#000a; color:#fff; cursor:pointer; }
+.pagetabs { display:flex; gap:6px; } .pagetabs button { border:1px solid var(--line); background:var(--bg2); color:var(--mut); border-radius:99px; padding:6px 14px; cursor:pointer; font-size:.82rem; }
+.pagetabs button.on { background:var(--acc); color:var(--on-acc); border-color:var(--acc); }
+.swatch.custom { position:relative; overflow:hidden; display:inline-block; background:conic-gradient(#e8a0a8,#e0b04a,#7bc79a,#6b8fd6,#9b6bd6,#e8a0a8); }
+.swatch.custom input { position:absolute; inset:-6px; width:48px; height:48px; opacity:0; cursor:pointer; }

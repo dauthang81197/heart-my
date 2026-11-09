@@ -97,6 +97,22 @@ function PaperShape({ paper }: { paper: Design['paper'] }) {
   return base;
 }
 
+/** Đổi màu mực: giữ nguyên độ trong suốt, thay toàn bộ màu bằng màu chọn. */
+function tint(hex: string) {
+  const n = parseInt(hex.replace('#', ''), 16); const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return (img: ImageData) => { const d = img.data; for (let i = 0; i < d.length; i += 4) { d[i] = r; d[i + 1] = g; d[i + 2] = b; } };
+}
+function PageImg({ src, ink }: { src: string; ink?: string | null }) {
+  const [img] = useImage(src, 'anonymous');
+  const ref = useRef<Konva.Image>(null);
+  useEffect(() => {
+    const n = ref.current; if (!n || !img) return;
+    if (ink && /^#[0-9a-f]{6}$/i.test(ink)) { n.cache({ pixelRatio: 2 }); n.filters([tint(ink)]); } else { n.clearCache(); n.filters([]); }
+    n.getLayer()?.batchDraw();
+  }, [img, ink]);
+  return <KImage ref={ref} image={img} x={0} y={0} width={W} height={H} listening={false} />;
+}
+
 function Img({ item, ...rest }: { item: Item } & any) {
   const [img] = useImage(item.src!, 'anonymous');
   return <KImage image={img} {...rest} />;
@@ -105,13 +121,13 @@ function Img({ item, ...rest }: { item: Item } & any) {
 export type CanvasHandle = { toDataURL: () => string };
 
 type Props = {
-  design: Design; width: number; editable?: boolean; tool?: 'select' | 'draw';
+  design: Design; width: number; page?: number; editable?: boolean; tool?: 'select' | 'draw';
   brush?: { color: string; size: number }; selectedId?: string | null;
   onSelect?: (id: string | null) => void; onChange?: (d: Design, commit: boolean) => void;
 };
 
 const LetterCanvas = forwardRef<CanvasHandle, Props>(function LetterCanvas(
-  { design, width, editable, tool = 'select', brush, selectedId, onSelect, onChange }, ref) {
+  { design, width, page = 0, editable, tool = 'select', brush, selectedId, onSelect, onChange }, ref) {
   const scale = width / W;
   const stage = useRef<Konva.Stage>(null);
   const tr = useRef<Konva.Transformer>(null);
@@ -139,7 +155,7 @@ const LetterCanvas = forwardRef<CanvasHandle, Props>(function LetterCanvas(
     if (!editable) return;
     if (tool === 'draw' && brush) {
       drawing.current = true; const p = pos();
-      onChange?.({ ...design, items: [...design.items, { id: 'l' + Date.now(), type: 'line', x: 0, y: 0, points: [p.x, p.y], stroke: brush.color, strokeWidth: brush.size }] }, false);
+      onChange?.({ ...design, items: [...design.items, { id: 'l' + Date.now(), type: 'line', page, x: 0, y: 0, points: [p.x, p.y], stroke: brush.color, strokeWidth: brush.size }] }, false);
     }
   };
   const move = () => {
@@ -157,7 +173,8 @@ const LetterCanvas = forwardRef<CanvasHandle, Props>(function LetterCanvas(
       onMouseMove={move} onTouchMove={move} onMouseUp={up} onTouchEnd={up}>
       <Layer>
         <PaperShape paper={design.paper} />
-        {design.items.map((it) => {
+        {design.pages?.[page] && <PageImg src={design.pages[page]} ink={design.pageInk?.[page]} />}
+        {design.items.filter((it) => (it.page ?? 0) === page).map((it) => {
           const common = {
             key: it.id, id: it.id, x: it.x, y: it.y, rotation: it.rotation ?? 0,
             draggable: editable && tool === 'select',
