@@ -91,7 +91,7 @@ export class LettersService {
 
   publicFeed() {
     return this.prisma.letter.findMany({
-      where: { type: LetterType.PUBLIC, status: LetterStatus.SENT },
+      where: { type: LetterType.PUBLIC, status: LetterStatus.SENT, hidden: false },
       orderBy: { sentAt: 'desc' }, take: 50,
       select: { shareToken: true, title: true, envelope: true, design: true, sentAt: true, author: { select: { name: true } }, stamp: true },
     });
@@ -100,10 +100,23 @@ export class LettersService {
   async viewByToken(token: string) {
     const l = await this.prisma.letter.findUnique({
       where: { shareToken: token },
-      select: { shareToken: true, status: true, type: true, title: true, envelope: true, design: true, sentAt: true, author: { select: { name: true, avatar: true } }, stamp: true },
+      select: { shareToken: true, status: true, hidden: true, type: true, title: true, envelope: true, design: true, sentAt: true, author: { select: { name: true, avatar: true } }, stamp: true },
     });
-    if (!l || l.status !== LetterStatus.SENT) throw new NotFoundException('Thư không tồn tại hoặc chưa đến ngày gửi');
+    if (!l || l.status !== LetterStatus.SENT || l.hidden) throw new NotFoundException('Thư không tồn tại, đã bị gỡ hoặc chưa đến ngày gửi');
     return l; // không trả email người nhận / id tác giả
+  }
+
+  /** Báo cáo thư vi phạm. Mỗi người báo cáo 1 lần/thư; đủ REPORT_AUTO_HIDE người khác nhau thì tự ẩn chờ quản trị viên xem. */
+  async report(token: string, reason: string, note: string | undefined, reporterKey: string) {
+    const l = await this.prisma.letter.findUnique({ where: { shareToken: token }, select: { id: true, status: true } });
+    if (!l || l.status !== LetterStatus.SENT) throw new NotFoundException('Thư không tồn tại');
+    await this.prisma.report.upsert({
+      where: { letterId_reporterKey: { letterId: l.id, reporterKey } },
+      update: { reason, note: note?.slice(0, 500) }, create: { letterId: l.id, reason, note: note?.slice(0, 500), reporterKey },
+    });
+    const open = await this.prisma.report.count({ where: { letterId: l.id, status: 'OPEN' } });
+    if (open >= Number(process.env.REPORT_AUTO_HIDE ?? 3)) await this.prisma.letter.update({ where: { id: l.id }, data: { hidden: true } });
+    return { ok: true };
   }
 
   /** Mỗi phút: giao các thư hẹn giờ đã đến hạn. */

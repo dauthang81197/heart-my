@@ -1,7 +1,7 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 import { api, getToken, setToken } from './api';
 
-type User = { id: string; email: string; name: string; avatar?: string; locale: string; role?: string; hasPassword?: boolean };
+type User = { id: string; email: string; name: string; avatar?: string; locale: string; role?: string; hasPassword?: boolean; emailVerified?: boolean };
 const Ctx = createContext<{ user: User | null; loading: boolean; login: (r: { token: string; user: User }) => void; logout: () => void; refresh: () => Promise<void> }>(null!);
 
 export function AuthProvider({ children }: { children: ReactNode }) {

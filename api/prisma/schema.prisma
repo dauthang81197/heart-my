@@ -33,12 +33,15 @@ model User {
   passwordHash String?
   googleId     String?  @unique
   emailVerified Boolean @default(false)
+  tokenVersion Int      @default(0) // tăng khi đổi/đặt lại mật khẩu hoặc xoá tài khoản → vô hiệu mọi JWT cũ
+  deletedAt    DateTime?
   locale       String   @default("vi")
   role         String   @default("USER")
   createdAt    DateTime @default(now())
   letters      Letter[]
   stamps       UserStamp[]
   orders       Order[]
+  authTokens   AuthToken[]
 }
 
 model Stamp {
@@ -76,11 +79,13 @@ model Letter {
   design         Json         @default("{}")
   stampId        String?
   shareToken     String       @unique @default(cuid())
+  hidden         Boolean      @default(false) // bị gỡ do báo cáo / quản trị viên
   sentAt         DateTime?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   author         User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
   stamp          Stamp?       @relation(fields: [stampId], references: [id])
+  reports        Report[]
 
   @@index([authorId])
   @@index([status, deliverAt])
@@ -99,4 +104,32 @@ model Order {
   expiresAt  DateTime
   createdAt  DateTime    @default(now())
   user       User        @relation(fields: [userId], references: [id])
+}
+
+/// Token dùng 1 lần cho xác minh email / đặt lại mật khẩu (lưu hash SHA-256).
+model AuthToken {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String // VERIFY | RESET
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+}
+
+model Report {
+  id          String   @id @default(cuid())
+  letterId    String
+  reason      String // SPAM | ABUSE | ADULT | COPYRIGHT | OTHER
+  note        String?
+  reporterKey String // userId hoặc IP
+  status      String   @default("OPEN") // OPEN | RESOLVED | DISMISSED
+  createdAt   DateTime @default(now())
+  letter      Letter   @relation(fields: [letterId], references: [id], onDelete: Cascade)
+
+  @@unique([letterId, reporterKey])
+  @@index([status])
 }

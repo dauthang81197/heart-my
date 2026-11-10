@@ -24,3 +24,10 @@ Build local không cần Docker Hub: `docker compose up -d --build`.
 
 ## SePay (VietQR tự xác nhận)
 Webhook URL: `https://<domain>/api/orders/webhook/sepay`, kiểu xác thực API Key = `SEPAY_API_KEY`. Nội dung CK chứa mã đơn `HPxxxxxxxx`.
+
+## Vận hành
+- **Giám sát uptime:** tạo monitor (UptimeRobot, Better Stack...) gọi `https://<domain>/api/health` mỗi 5 phút, mong đợi `{"ok":true}`. Endpoint này kiểm tra cả kết nối database.
+- **Báo cáo vi phạm:** thư công khai bị báo cáo bởi `REPORT_AUTO_HIDE` người khác nhau (mặc định 3) sẽ tự ẩn chờ admin xem tại trang Quản trị → Báo cáo vi phạm.
+- **Email (SMTP):** cần cấu hình `SMTP_*` để gửi thư thông báo, xác minh email và quên mật khẩu. Chưa cấu hình thì các email này chỉ được ghi cảnh báo vào log.
+- **Test:** `cd api && npm test` (chạy cả trong CI trước khi build image).
+- **Nội dung pháp lý:** chỉnh email liên hệ trong `web/src/pages/Legal.tsx` và nhờ người có chuyên môn rà soát Điều khoản/Chính sách trước khi mở rộng.

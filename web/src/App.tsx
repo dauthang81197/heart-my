@@ -8,6 +8,8 @@ import Editor from './pages/Editor';
 import SendLetter from './pages/SendLetter';
 import Admin from './pages/Admin';
 import ViewLetter from './pages/ViewLetter';
+import { Privacy, Terms } from './pages/Legal';
+import { Forgot, Reset, Verify } from './pages/AuthLinks';
 import { Spinner } from './components/UI';
 
 function Private({ children }: { children: ReactNode }) {
@@ -21,6 +23,11 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/forgot" element={<Forgot />} />
+      <Route path="/reset" element={<Reset />} />
+      <Route path="/verify" element={<Verify />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
       <Route path="/l/:token" element={<ViewLetter />} />
       <Route path="/app/*" element={<Private><Dashboard /></Private>} />
       <Route path="/admin" element={<Private><Admin /></Private>} />

@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
-import { IsDateString, IsEmail, IsEnum, IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
+import { IsDateString, IsEmail, IsEnum, IsIn, IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
 import { LetterType } from '@prisma/client';
 import { CurrentUser, JwtGuard } from '../common/jwt.guard';
 import { PrismaService } from '../prisma/prisma.module';
@@ -14,6 +15,7 @@ class UpdateDto {
   @IsOptional() @IsString() @MaxLength(40) envelope?: string;
   @IsOptional() @IsObject() design?: Record<string, any>;
 }
+class ReportDto { @IsIn(['SPAM', 'ABUSE', 'ADULT', 'COPYRIGHT', 'OTHER']) reason: string; @IsOptional() @IsString() @MaxLength(500) note?: string; }
 class SendDto { @IsString() stampId: string; }
 
 @Controller('letters')
@@ -23,6 +25,12 @@ export class LettersController {
   // --- public (khai báo trước :id) ---
   @Get('public/feed') feed() { return this.svc.publicFeed(); }
   @Get('view/:token') view(@Param('token') t: string) { return this.svc.viewByToken(t); }
+
+  @Post('report/:token') @HttpCode(200) @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  report(@Param('token') t: string, @Body() d: ReportDto, @Req() req: any) {
+    const key = (typeof req.headers['x-real-ip'] === 'string' && req.headers['x-real-ip']) || req.ip;
+    return this.svc.report(t, d.reason, d.note, key);
+  }
 
   // --- cần đăng nhập ---
   @Get() @UseGuards(JwtGuard) list(@CurrentUser() u: { sub: string }) { return this.svc.list(u.sub); }

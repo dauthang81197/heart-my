@@ -20,6 +20,24 @@ const TYPES: Record<string, { ext: string; kind: 'image' | 'audio'; max: number 
   'audio/wav': { ext: 'wav', kind: 'audio', max: 10 << 20 },
 };
 
+/** Kiểm tra nội dung thật của file (không chỉ tin header Content-Type do client gửi). */
+export function sniff(mime: string, b: Buffer): boolean {
+  const at = (off: number, s: string) => b.length >= off + s.length && b.subarray(off, off + s.length).toString('latin1') === s;
+  const hex = (...bytes: number[]) => b.length >= bytes.length && bytes.every((x, i) => b[i] === x);
+  switch (mime) {
+    case 'image/png': return hex(0x89, 0x50, 0x4e, 0x47);
+    case 'image/jpeg': return hex(0xff, 0xd8, 0xff);
+    case 'image/gif': return at(0, 'GIF8');
+    case 'image/webp': return at(0, 'RIFF') && at(8, 'WEBP');
+    case 'audio/webm': return hex(0x1a, 0x45, 0xdf, 0xa3);
+    case 'audio/ogg': return at(0, 'OggS');
+    case 'audio/wav': return at(0, 'RIFF') && at(8, 'WAVE');
+    case 'audio/mp4': case 'audio/x-m4a': case 'audio/m4a': return at(4, 'ftyp');
+    case 'audio/mpeg': case 'audio/mp3': return at(0, 'ID3') || (b.length > 1 && b[0] === 0xff && (b[1] & 0xe0) === 0xe0);
+    default: return true; // loại khác đã bị chặn bởi bảng TYPES
+  }
+}
+
 /** Lưu file lên Cloudflare R2 (S3 API). Chưa cấu hình R2 → lưu đĩa local (chỉ dùng dev). */
 @Injectable()
 class StorageService {
@@ -59,6 +77,7 @@ class UploadsController {
     const mime = f.mimetype.split(';')[0]; // audio/webm;codecs=opus → audio/webm
     const t = TYPES[mime];
     if (!t) throw new BadRequestException('Định dạng không được hỗ trợ (ảnh png/jpg/webp/gif, âm thanh webm/ogg/m4a/mp3/wav)');
+    if (!sniff(mime, f.buffer)) throw new BadRequestException('Nội dung file không khớp định dạng khai báo');
     if (f.size > t.max) throw new BadRequestException(`File quá lớn (tối đa ${t.max >> 20}MB)`);
     return { url: await this.storage.put(u.sub, f.buffer, mime, t.ext), kind: t.kind };
   }

@@ -55,6 +55,7 @@ export default function Landing() {
           </div>
         </div>
       </section>
+      <footer className="foot"><Link to="/terms">Điều khoản</Link><Link to="/privacy">Chính sách riêng tư</Link><span>© HeartPost</span></footer>
     </>
   );
 }

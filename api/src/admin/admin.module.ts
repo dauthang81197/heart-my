@@ -1,5 +1,5 @@
 import { Body, CanActivate, Controller, ExecutionContext, Get, Injectable, Module, Param, Patch, Post, UseGuards } from '@nestjs/common';
-import { IsBoolean, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Min } from 'class-validator';
 import { PrismaService } from '../prisma/prisma.module';
 import { AuthModule } from '../auth/auth.module';
 import { JwtGuard } from '../common/jwt.guard';
@@ -24,6 +24,8 @@ class StampPatch {
   @IsOptional() @IsInt() @Min(1000) price?: number; @IsOptional() @IsBoolean() active?: boolean;
 }
 
+class ResolveDto { @IsIn(['HIDE', 'RESTORE', 'DISMISS']) action: 'HIDE' | 'RESTORE' | 'DISMISS'; }
+
 @Controller('admin')
 @UseGuards(JwtGuard, AdminGuard)
 class AdminController {
@@ -31,7 +33,7 @@ class AdminController {
 
   @Get('stats') async stats() {
     const [users, letters, paid] = await Promise.all([
-      this.prisma.user.count(), this.prisma.letter.count({ where: { status: { not: 'DRAFT' } } }),
+      this.prisma.user.count({ where: { deletedAt: null } }), this.prisma.letter.count({ where: { status: { not: 'DRAFT' } } }),
       this.prisma.order.aggregate({ where: { status: 'PAID' }, _sum: { amount: true }, _count: true }),
     ]);
     return { users, letters, paidOrders: paid._count, revenue: paid._sum.amount ?? 0 };
@@ -41,6 +43,25 @@ class AdminController {
   @Post('orders/:id/confirm') async confirm(@Param('id') id: string) {
     const o = await this.prisma.order.findUniqueOrThrow({ where: { id } });
     return { result: await this.orders.markPaid(o.code, o.amount, 'admin-' + Date.now()) };
+  }
+  /** Báo cáo đang chờ, gom theo thư. */
+  @Get('reports') async reports() {
+    const rows = await this.prisma.report.findMany({
+      where: { status: 'OPEN' }, orderBy: { createdAt: 'desc' }, take: 200,
+      include: { letter: { select: { id: true, shareToken: true, title: true, type: true, hidden: true, envelope: true, design: true, author: { select: { email: true, name: true } } } } },
+    });
+    const by = new Map<string, any>();
+    for (const r of rows) {
+      const g = by.get(r.letterId) ?? { letter: r.letter, reports: [] };
+      g.reports.push({ id: r.id, reason: r.reason, note: r.note, createdAt: r.createdAt }); by.set(r.letterId, g);
+    }
+    return [...by.values()];
+  }
+  @Post('letters/:id/moderate') async moderate(@Param('id') id: string, @Body() d: ResolveDto) {
+    const hide = d.action === 'HIDE';
+    await this.prisma.letter.update({ where: { id }, data: { hidden: hide } });
+    await this.prisma.report.updateMany({ where: { letterId: id, status: 'OPEN' }, data: { status: d.action === 'DISMISS' ? 'DISMISSED' : 'RESOLVED' } });
+    return { ok: true, hidden: hide };
   }
   @Get('stamps') stamps() { return this.prisma.stamp.findMany({ orderBy: { price: 'asc' } }); }
   @Post('stamps') createStamp(@Body() d: StampDto) { return this.prisma.stamp.create({ data: d }); }

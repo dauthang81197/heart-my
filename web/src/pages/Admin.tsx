@@ -3,6 +3,8 @@ import { Link, Navigate } from 'react-router-dom';
 import { api, money, Stamp } from '../api';
 import { useAuth } from '../auth';
 import { useUI } from '../components/UI';
+import LetterCanvas from '../components/LetterCanvas';
+import { normalizeDesign } from '../design';
 
 export default function Admin() {
   const { confirm } = useUI();
@@ -11,12 +13,14 @@ export default function Admin() {
   const [orders, setOrders] = useState<any[]>([]);
   const [stamps, setStamps] = useState<(Stamp & { active: boolean })[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [reports, setReports] = useState<any[]>([]);
   const [nu, setNu] = useState({ name: '', image: '', price: 5000 });
   const load = useCallback(() => {
-    api('/admin/stats').then(setStats); api('/admin/orders').then(setOrders); api('/admin/stamps').then(setStamps); api('/admin/users').then(setUsers);
+    api('/admin/stats').then(setStats); api('/admin/orders').then(setOrders); api('/admin/stamps').then(setStamps); api('/admin/users').then(setUsers); api('/admin/reports').then(setReports);
   }, []);
   useEffect(() => { if (user?.role === 'ADMIN') load(); }, [user]);
   if (user?.role !== 'ADMIN') return <Navigate to="/app" replace />;
+  const moderate = (id: string, action: 'HIDE' | 'RESTORE' | 'DISMISS') => api(`/admin/letters/${id}/moderate`, { body: { action } }).then(load);
   const patch = (id: string, d: object) => api(`/admin/stamps/${id}`, { method: 'PATCH', body: d }).then(load);
   return (
     <div className="main" style={{ margin: '0 auto' }}>
@@ -24,6 +28,24 @@ export default function Admin() {
       <div className="grid" style={{ marginBottom: 28 }}>
         {[['Người dùng', stats.users], ['Thư đã gửi', stats.letters], ['Đơn đã thanh toán', stats.paidOrders], ['Doanh thu', money(stats.revenue ?? 0)]].map(([k, v]) => (
           <div key={k as string} className="card"><div className="muted">{k}</div><div style={{ fontSize: '1.8rem', color: 'var(--acc)' }}>{v}</div></div>))}
+      </div>
+      <h3>Báo cáo vi phạm {reports.length > 0 && <span className="badge" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}>{reports.length}</span>}</h3>
+      <div className="card" style={{ marginBottom: 28 }}>
+        {!reports.length && <span className="muted">Không có báo cáo nào đang chờ.</span>}
+        {reports.map(({ letter: l, reports: rs }) => (
+          <div key={l.id} className="row" style={{ padding: '12px 0', borderTop: '1px solid var(--line)', alignItems: 'flex-start' }}>
+            <div style={{ width: 90 }}><LetterCanvas design={normalizeDesign(l.design, l.envelope)} width={90} /></div>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <b>{l.title || 'Thư chưa đặt tên'}</b> {l.hidden && <span className="badge">đang ẩn</span>}
+              <div className="muted" style={{ fontSize: '.85rem' }}>{l.author.name} · {l.author.email} · {l.type}</div>
+              <div style={{ fontSize: '.85rem', marginTop: 6 }}>{rs.length} báo cáo: {[...new Set(rs.map((r: any) => r.reason))].join(', ')}</div>
+              {rs.filter((r: any) => r.note).slice(0, 3).map((r: any) => <div key={r.id} className="muted" style={{ fontSize: '.8rem' }}>“{r.note}”</div>)}
+            </div>
+            <div className="row">
+              <button className="btn danger sm" onClick={() => moderate(l.id, 'HIDE')}>Gỡ thư</button>
+              <button className="btn ghost sm" onClick={() => moderate(l.id, 'DISMISS')}>Bỏ qua{l.hidden ? ' & hiện lại' : ''}</button>
+            </div>
+          </div>))}
       </div>
       <h3>Tem</h3>
       <div className="card" style={{ marginBottom: 28 }}>

@@ -17,6 +17,16 @@ export class MailService {
     await this.tx.sendMail({ from: process.env.MAIL_FROM ?? 'HeartPost <no-reply@heartpost.local>', to, subject, html });
   }
 
+  verifyEmail(to: string, link: string) {
+    const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+    return this.send(to, 'Xác minh email HeartPost', `<div style="font-family:sans-serif"><h2>Xác minh email</h2><p>Bấm để xác minh email của bạn (hiệu lực 24 giờ):</p><p><a href="${esc(link)}">Xác minh email</a></p></div>`);
+  }
+
+  resetPassword(to: string, link: string) {
+    const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+    return this.send(to, 'Đặt lại mật khẩu HeartPost', `<div style="font-family:sans-serif"><h2>Đặt lại mật khẩu</h2><p>Bấm vào liên kết dưới đây trong vòng 30 phút. Nếu không phải bạn yêu cầu, hãy bỏ qua email này.</p><p><a href="${esc(link)}">Đặt lại mật khẩu</a></p></div>`);
+  }
+
   letterReceived(to: string, from: string, link: string) {
     const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
     const name = esc(from).slice(0, 80);

@@ -6,6 +6,7 @@ import { useI18n } from '../i18n';
 import Envelope from '../components/Envelope';
 import StampShop from '../components/StampShop';
 import { useUI } from '../components/UI';
+import { useNavigate as useNav } from 'react-router-dom';
 
 const TYPES = [
   { k: 'PRIVATE', e: '💌', t: 'Gửi cho một người', d: 'Thư riêng tư, chỉ người nhận qua email mới mở được.' },
@@ -43,6 +44,7 @@ function LetterGrid({ letters, onDelete }: { letters: Letter[]; onDelete: (id: s
           <div className="muted" style={{ fontSize: '.82rem' }}>{l.recipientEmail ?? (l.type === 'PUBLIC' ? 'Công khai' : 'Chưa có người nhận')}{l.deliverAt && ` · ${new Date(l.deliverAt).toLocaleString('vi-VN')}`}</div>
           <div className="row" style={{ justifyContent: 'space-between', width: '100%' }}>
             <span className={'badge ' + l.status}>{statusLabel[l.status]}</span>
+            {(l as any).hidden && <span className="badge" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} title="Thư bị gỡ do báo cáo vi phạm">Đã bị ẩn</span>}
             {l.status !== 'DRAFT' && <button className="btn ghost sm" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(`${location.origin}/l/${l.shareToken}`); toast('Đã sao chép link'); }}>Sao chép link</button>}
             {l.status === 'DRAFT' && <button className="btn danger sm" onClick={async (e) => { e.stopPropagation(); if (await confirm({ message: 'Xoá thư này?', danger: true, okText: 'Xoá' })) onDelete(l.id); }}>Xoá</button>}
           </div>
@@ -65,7 +67,7 @@ function Vault() {
         {([['mine', 'Thư của tôi'], ['inbox', 'Thư nhận'], ['public', 'Tường thư']] as const).map(([k, n]) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{n}</button>)}
       </div>
       {tab === 'mine' && <LetterGrid letters={mine} onDelete={(id) => api(`/letters/${id}`, { method: 'DELETE' }).then(load)} />}
-      {tab === 'inbox' && <>{!inbox.length && <p className="muted">Hộp thư nhận chỉ hiện với tài khoản đã xác minh email. Hãy đăng nhập bằng Google để xem thư gửi tới email của bạn.</p>}<LetterGrid letters={inbox} onDelete={() => {}} /></>}
+      {tab === 'inbox' && <>{!inbox.length && <p className="muted">Chưa có thư nào. Hộp thư nhận chỉ hiện với tài khoản đã xác minh email.</p>}<LetterGrid letters={inbox} onDelete={() => {}} /></>}
       {tab === 'public' && <LetterGrid letters={feed} onDelete={() => {}} />}
     </>
   );
@@ -102,6 +104,9 @@ function StampsPage() {
 
 function Settings() {
   const { user, logout, refresh } = useAuth();
+  const { confirm, toast } = useUI();
+  const nav = useNav();
+  const [del, setDel] = useState('');
   const { lang, setLang } = useI18n();
   const [name, setName] = useState(user?.name ?? '');
   const [pw, setPw] = useState('');
@@ -113,9 +118,32 @@ function Settings() {
     <div className="card" style={{ maxWidth: 460 }}>
       <label className="f">Email<input className="input" value={user?.email} disabled /></label>
       <label className="f">Tên hiển thị<input className="input" value={name} onChange={(e) => setName(e.target.value)} /></label>
-      <label className="f">{user?.hasPassword ? 'Đổi mật khẩu' : 'Đặt mật khẩu (để đăng nhập bằng email)'}<input className="input" type="password" minLength={6} value={pw} onChange={(e) => setPw(e.target.value)} /></label>
+      <label className="f">{user?.hasPassword ? 'Đổi mật khẩu' : 'Đặt mật khẩu (để đăng nhập bằng email)'} · tối thiểu 8 ký tự<input className="input" type="password" minLength={8} value={pw} onChange={(e) => setPw(e.target.value)} /></label>
       <label className="f">Ngôn ngữ<select className="input" value={lang} onChange={(e) => setLang(e.target.value as any)}><option value="vi">Tiếng Việt</option><option value="en">English</option></select></label>
       <div className="row"><button className="btn" onClick={save}>Lưu</button><button className="btn ghost" onClick={logout}>Đăng xuất</button><span className="muted">{msg}</span></div>
+      <hr style={{ border: 0, borderTop: '1px solid var(--line)', margin: '24px 0' }} />
+      <h4 style={{ margin: '0 0 6px', color: 'var(--danger)' }}>Xoá tài khoản</h4>
+      <p className="muted" style={{ fontSize: '.85rem', marginTop: 0 }}>Xoá vĩnh viễn toàn bộ thư và tem còn lại của bạn. Không thể hoàn tác. Gõ <b>XOA</b> để xác nhận.</p>
+      <div className="row"><input className="input" style={{ flex: 1, minWidth: 120 }} placeholder="XOA" value={del} onChange={(e) => setDel(e.target.value)} />
+        <button className="btn danger" disabled={del !== 'XOA' || user?.role === 'ADMIN'} onClick={async () => {
+          if (!(await confirm({ message: 'Xoá vĩnh viễn tài khoản và toàn bộ thư của bạn?', danger: true, okText: 'Xoá tài khoản' }))) return;
+          try { await api('/users/me', { method: 'DELETE', body: { confirm: 'XOA' } }); toast('Đã xoá tài khoản'); logout(); nav('/'); } catch (e: any) { toast(e.message, 'error'); }
+        }}>Xoá tài khoản</button></div>
+      {user?.role === 'ADMIN' && <p className="muted" style={{ fontSize: '.8rem' }}>Tài khoản quản trị không thể tự xoá.</p>}
+    </div>
+  );
+}
+
+function VerifyBanner() {
+  const { toast } = useUI();
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="banner">
+      <span>📧 Email của bạn chưa được xác minh. Hãy xác minh để xem hộp thư nhận. (Hoặc đăng nhập bằng Google.)</span>
+      <button className="btn sm" disabled={busy} onClick={async () => {
+        setBusy(true);
+        try { await api('/auth/send-verification', { method: 'POST' }); toast('Đã gửi email xác minh, hãy kiểm tra hộp thư'); } catch (e: any) { toast(e.message, 'error'); } finally { setBusy(false); }
+      }}>Gửi lại email xác minh</button>
     </div>
   );
 }
@@ -139,6 +167,7 @@ export default function Dashboard() {
         <div className="muted" style={{ padding: 8, fontSize: '.85rem' }}>{user?.name}</div>
       </aside>
       <main className="main">
+        {user && user.emailVerified === false && <VerifyBanner />}
         <div className="topbar"><h2>{items.find(([to]) => to === loc.pathname)?.[2]}</h2><button className="btn" onClick={() => setWriting(true)}>✍️ {t('write')}</button></div>
         <Routes>
           <Route index element={<Overview />} />
