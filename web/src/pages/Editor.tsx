@@ -113,6 +113,8 @@ export default function Editor() {
     const k = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).matches('input,textarea,select')) return;
       if ((e.key === 'Delete' || e.key === 'Backspace') && sel) delSel();
+      const d = e.shiftKey ? 10 : 2, mv: Record<string, [number, number]> = { ArrowLeft: [-d, 0], ArrowRight: [d, 0], ArrowUp: [0, -d], ArrowDown: [0, d] };
+      if (sel && mv[e.key] && step === 'content') { e.preventDefault(); const it = design.items.find((x) => x.id === sel); if (it) patchSel({ x: it.x + mv[e.key][0], y: it.y + mv[e.key][1] }); }
       if ((e.metaKey || e.ctrlKey) && e.key === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); }
     };
     window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k);
@@ -358,6 +360,16 @@ export default function Editor() {
             {step === 'content'
               ? <div style={{ display: 'grid', gap: 10, justifyItems: 'center' }}>
                   {pageCount(design) > 1 && <div className="pagetabs">{Array.from({ length: pageCount(design) }, (_, i) => <button key={i} className={pg === i ? 'on' : ''} onClick={() => { setPg(i); setSel(null); }}>Trang {i + 1}</button>)}</div>}
+                  <div className={'seltools' + (selected && tool === 'select' ? ' show' : '')}>
+                    {selected ? <>
+                      <span className="st-name">{selected.type === 'text' ? 'Chữ' : selected.type === 'sticker' ? 'Sticker' : selected.type === 'tape' ? 'Băng dính' : selected.type === 'image' ? 'Ảnh' : 'Nét vẽ'}</span>
+                      {selected.type === 'text' && <button title="Sửa nội dung, phông chữ" onClick={() => setSub({ ...sub, content: 'text' })}>✎ Sửa</button>}
+                      {selected.type !== 'line' && <><button title="Xoay trái" onClick={() => patchSel({ rotation: (selected.rotation ?? 0) - 15 })}>⟲</button><button title="Xoay phải" onClick={() => patchSel({ rotation: (selected.rotation ?? 0) + 15 })}>⟳</button></>}
+                      <button title="Đưa lên trên" onClick={() => order(1)}>↑</button><button title="Đưa xuống dưới" onClick={() => order(-1)}>↓</button>
+                      <button title="Nhân bản" onClick={() => add({ ...selected, id: undefined as any, x: selected.x + 24, y: selected.y + 24 })}>⧉</button>
+                      <button className="del" title="Xoá (phím Delete)" onClick={delSel}>🗑 Xoá</button>
+                    </> : <span className="st-name">Bấm vào sticker/chữ trên giấy để sửa, kéo để di chuyển</span>}
+                  </div>
                   <LetterCanvas design={design} width={cw} page={Math.min(pg, pageCount(design) - 1)} editable tool={tool} brush={brush} selectedId={sel} onSelect={setSel} onChange={onCanvas} />
                 </div>
               : <div style={{ marginTop: open ? envSize * 0.45 : 0, transition: 'margin .5s' }}><Envelope design={design} open={open} pulled={pulled} size={envSize} paper={paperEl} onClick={() => { if (pulled) setPulled(false); else setOpen(!open); }} onPaperClick={() => setPulled(!pulled)} /></div>}
