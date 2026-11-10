@@ -129,11 +129,11 @@ export type CanvasHandle = { toDataURL: () => string };
 type Props = {
   design: Design; width: number; page?: number; editable?: boolean; tool?: 'select' | 'draw';
   brush?: { color: string; size: number }; selectedId?: string | null;
-  onSelect?: (id: string | null) => void; onChange?: (d: Design, commit: boolean) => void;
+  onSelect?: (id: string | null) => void; onEdit?: (id: string) => void; onChange?: (d: Design, commit: boolean) => void;
 };
 
 const LetterCanvas = forwardRef<CanvasHandle, Props>(function LetterCanvas(
-  { design, width, page = 0, editable, tool = 'select', brush, selectedId, onSelect, onChange }, ref) {
+  { design, width, page = 0, editable, tool = 'select', brush, selectedId, onSelect, onEdit, onChange }, ref) {
   const scale = width / W;
   const stage = useRef<Konva.Stage>(null);
   const tr = useRef<Konva.Transformer>(null);
@@ -186,6 +186,8 @@ const LetterCanvas = forwardRef<CanvasHandle, Props>(function LetterCanvas(
             draggable: editable && tool === 'select',
             onClick: () => editable && tool === 'select' && onSelect?.(it.id),
             onTap: () => editable && tool === 'select' && onSelect?.(it.id),
+            onDblClick: () => editable && tool === 'select' && onEdit?.(it.id), onDblTap: () => editable && tool === 'select' && onEdit?.(it.id),
+            onDragStart: () => editable && tool === 'select' && onSelect?.(it.id),
             onDragEnd: (e: any) => upd(it.id, { x: e.target.x(), y: e.target.y() }),
             onTransformEnd: (e: any) => {
               const n = e.target as Konva.Node; const sx = n.scaleX(), sy = n.scaleY();

@@ -112,6 +112,13 @@ export default function Editor() {
     commit({ ...design, items: [...design.items, item] }); setSel(item.id); setTool('select');
   };
   const selected = design.items.find((i) => i.id === sel);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const editItem = (id: string) => {
+    const it = design.items.find((x) => x.id === id); if (!it) return;
+    setSel(id); setTool('select');
+    setSub((x) => ({ ...x, content: it.type === 'text' ? 'text' : it.type === 'tape' ? 'deco' : it.type === 'sticker' ? 'sticker' : x.content }));
+    setTimeout(() => bodyRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 50);
+  };
   const patchSel = (p: Partial<Item>) => sel && commit({ ...design, items: design.items.map((i) => (i.id === sel ? { ...i, ...p } : i)) });
   const delSel = () => { if (sel) { commit({ ...design, items: design.items.filter((i) => i.id !== sel) }); setSel(null); } };
   const order = (dir: 1 | -1) => {
@@ -262,8 +269,8 @@ export default function Editor() {
         <AudioRecorder disabled={design.audios.length >= 3} onSaved={(a) => commit({ ...design, audios: [...design.audios, a] })} />
         {design.audios.map((a, i) => <div key={a.url} className="aud"><audio controls src={a.url} preload="metadata" /><button className="btn danger sm" onClick={() => set({ audios: design.audios.filter((_, j) => j !== i) })}>Xoá</button></div>)}
       </div>);
-    const selPanel = selected && <>
-      <h4>Đối tượng đang chọn</h4>
+    const selPanel = selected && <div className="selbox">
+      <h4 style={{ marginTop: 0 }}>Đang chỉnh: {selected.type === 'text' ? 'chữ' : selected.type === 'sticker' ? 'sticker' : selected.type === 'tape' ? 'băng dính' : selected.type === 'image' ? 'ảnh dán' : 'nét vẽ'}</h4>
       <div className="row"><button className="btn ghost sm" onClick={() => add({ ...selected, id: undefined as any, x: selected.x + 24, y: selected.y + 24 })}>Nhân bản</button><button className="btn ghost sm" onClick={() => order(1)}>↑ Lên trên</button><button className="btn ghost sm" onClick={() => order(-1)}>↓ Xuống dưới</button><button className="btn danger sm" onClick={delSel}>Xoá</button></div>
       <div className="row" style={{ marginTop: 8 }}><span className="muted">Độ mờ</span><input type="range" min={20} max={100} value={Math.round((selected.opacity ?? 1) * 100)} onChange={(ev) => patchSel({ opacity: +ev.target.value / 100 })} /></div>
       {selected.type === 'sticker' && selected.fill !== undefined && <div className="row" style={{ marginTop: 8 }}>{[...INKS, '#c9788a', '#b8892b'].map((c) => <span key={c} className={'swatch' + (selected.fill === c ? ' on' : '')} style={{ background: c }} onClick={() => patchSel({ fill: c })} />)}</div>}
@@ -289,7 +296,7 @@ export default function Editor() {
           {(['left', 'center', 'right'] as const).map((a) => <button key={a} className={'chip t' + (selected.align === a ? ' on' : '')} onClick={() => patchSel({ align: a })}>{{ left: '⬅', center: '↔', right: '➡' }[a]}</button>)}</div>
         <div className="row" style={{ marginTop: 8 }}><span className="muted">Giãn chữ</span><input type="range" min={0} max={16} value={selected.spacing ?? 0} onChange={(ev) => patchSel({ spacing: +ev.target.value })} /></div>
       </>}
-    </>;
+    </div>;
 
     if (s === 'sticker') {
       const cur = pack === 'recent' ? null : STICKER_PACKS.find((x) => x.k === pack) ?? STICKER_PACKS[0];
@@ -301,6 +308,7 @@ export default function Editor() {
         pushRecent(st); setRecent(loadRecent());
       };
       return <div className="pad">
+        {selPanel}
         <div className="packtabs">
           {recent.length > 0 && <button className={pack === 'recent' ? 'on' : ''} onClick={() => setPack('recent')}>🕘 Gần đây</button>}
           {STICKER_PACKS.map((x) => <button key={x.k} className={pack === x.k ? 'on' : ''} onClick={() => setPack(x.k)}>{x.icon} {x.n}</button>)}
@@ -308,11 +316,11 @@ export default function Editor() {
         {glyph && <div className="row" style={{ margin: '10px 0 2px' }}><span className="muted">Màu</span>{[...INKS, '#c9788a', '#b8892b'].map((c) => <span key={c} className={'swatch' + (glyphColor === c ? ' on' : '')} style={{ background: c }} onClick={() => setGlyphColor(c)} />)}</div>}
         <div className={'stk-grid' + (cur?.k === 'divider' ? ' wide' : '')}>{list.map((st) => <button key={st} className="stk" style={glyph ? { color: glyphColor } : undefined} onClick={() => put(st)}>{st}</button>)}</div>
         <p className="muted" style={{ fontSize: '.8rem' }}>Bấm để thả vào lá thư, sau đó kéo, xoay, phóng to trên giấy.</p>
-        {selPanel}
       </div>;
     }
     if (s === 'deco') return (
       <div className="pad">
+        {selPanel}
         <h4>Băng dính washi</h4>
         <div className="tapegrid">{TAPE_PATTERNS.map((t) => <button key={t.k} title={t.n} className={'tapechip' + (tapeK === t.k ? ' on' : '')} style={{ backgroundImage: `url(${tapeUrl(t.k, tapeC)})` }} onClick={() => setTapeK(t.k)} />)}</div>
         <div className="row" style={{ marginTop: 8 }}>{TAPE_COLORS.map((c) => <span key={c} className={'swatch' + (tapeC === c ? ' on' : '')} style={{ background: c }} onClick={() => setTapeC(c)} />)}</div>
@@ -323,13 +331,13 @@ export default function Editor() {
         <h4>Ghim, kẹp & dấu</h4>
         <div className="chips">{['📌', '📍', '📎', '🖇️', '🧷', '🔖', '🏷️', '✂️', '🗝️', '🕰️', '📮', '💌'].map((st) => <span key={st} className="chip" onClick={() => { add({ type: 'sticker', text: st, fontSize: 56 }); pushRecent(st); setRecent(loadRecent()); }}>{st}</span>)}</div>
         <p className="muted" style={{ fontSize: '.8rem', marginTop: 10 }}>Dán băng dính đè lên mép ảnh hoặc góc giấy để tạo cảm giác như thư thật. Dấu đóng (AIR MAIL, WITH LOVE…) nằm ở tab <b>Soạn thảo</b>.</p>
-        {selPanel}
       </div>);
 
     // text (soạn thảo)
     const addPreset = (pr: Preset) => add({ type: 'text', text: pr.text, fontFamily: pr.fontFamily, fontSize: pr.fontSize, fill: pr.fill, bold: pr.bold, italic: pr.italic, align: pr.align, width: pr.width ?? 440, rotation: pr.rotation, shadow: pr.shadow, outline: pr.outline, spacing: pr.spacing, underline: pr.underline, opacity: pr.opacity });
     return (
       <div className="pad">
+        {selPanel}
         <h4>Thêm vào lá thư</h4>
         <div className="row">
           <button className="btn sm" onClick={() => add({ type: 'text', text: 'Viết gì đó…', fontFamily: 'Dancing Script', fontSize: 34, fill: '#1f2328', width: 400 })}>＋ Chữ viết tay</button>
@@ -343,7 +351,6 @@ export default function Editor() {
         <div className="row">{INKS.map((c) => <span key={c} className={'swatch' + (brush.color === c ? ' on' : '')} style={{ background: c }} onClick={() => { setBrush({ ...brush, color: c }); setTool('draw'); }} />)}</div>
         <div className="row" style={{ marginTop: 8 }}><input type="range" min={1} max={30} value={brush.size} onChange={(ev) => setBrush({ ...brush, size: +ev.target.value })} /><span className="muted">{brush.size}px</span>
           <button className={'btn sm' + (tool === 'draw' ? '' : ' ghost')} onClick={() => setTool(tool === 'draw' ? 'select' : 'draw')}>{tool === 'draw' ? '✏️ Đang vẽ — bấm để dừng' : '✏️ Bật vẽ'}</button></div>
-        {selPanel}
         <label className="f" style={{ marginTop: 16 }}>Tên thư<input className="input" value={title} onChange={(ev) => setTitle(ev.target.value)} placeholder="Ví dụ: Gửi em…" /></label>
       </div>);
   })();
@@ -371,7 +378,7 @@ export default function Editor() {
           </div>
           <div className="seg">{SUBS[step].map(([k, n]) => <button key={k} className={sub[step] === k ? 'on' : ''} onClick={() => setSub({ ...sub, [step]: k })}>{n}</button>)}</div>
           <div className="panel-hint">{HINTS[step]} <button className="tplbtn" onClick={() => setTplOpen(true)}>✨ Mẫu thư dựng sẵn</button></div>
-          <div className="panel-body">{panel}</div>
+          <div className="panel-body" ref={bodyRef}>{panel}</div>
         </section>
 
         <section ref={prev} className={'ed2-prev' + (full ? ' full' : '') + (grid ? ' grid' : '') + (step === 'content' ? ' content' : '')}>
@@ -390,14 +397,14 @@ export default function Editor() {
                   <div className={'seltools' + (selected && tool === 'select' ? ' show' : '')}>
                     {selected ? <>
                       <span className="st-name">{selected.type === 'text' ? 'Chữ' : selected.type === 'sticker' ? 'Sticker' : selected.type === 'tape' ? 'Băng dính' : selected.type === 'image' ? 'Ảnh' : 'Nét vẽ'}</span>
-                      {selected.type === 'text' && <button title="Sửa nội dung, phông chữ" onClick={() => setSub({ ...sub, content: 'text' })}>✎ Sửa</button>}
+                      {selected.type !== 'line' && selected.type !== 'image' && <button title="Sửa nội dung, màu, kiểu" onClick={() => editItem(selected.id)}>✎ Sửa</button>}
                       {selected.type !== 'line' && <><button title="Xoay trái" onClick={() => patchSel({ rotation: (selected.rotation ?? 0) - 15 })}>⟲</button><button title="Xoay phải" onClick={() => patchSel({ rotation: (selected.rotation ?? 0) + 15 })}>⟳</button></>}
                       <button title="Đưa lên trên" onClick={() => order(1)}>↑</button><button title="Đưa xuống dưới" onClick={() => order(-1)}>↓</button>
                       <button title="Nhân bản" onClick={() => add({ ...selected, id: undefined as any, x: selected.x + 24, y: selected.y + 24 })}>⧉</button>
                       <button className="del" title="Xoá (phím Delete)" onClick={delSel}>🗑 Xoá</button>
                     </> : <span className="st-name">Bấm vào sticker/chữ trên giấy để sửa, kéo để di chuyển</span>}
                   </div>
-                  <LetterCanvas design={design} width={cw} page={Math.min(pg, pageCount(design) - 1)} editable tool={tool} brush={brush} selectedId={sel} onSelect={setSel} onChange={onCanvas} />
+                  <LetterCanvas design={design} width={cw} page={Math.min(pg, pageCount(design) - 1)} editable tool={tool} brush={brush} selectedId={sel} onSelect={setSel} onEdit={editItem} onChange={onCanvas} />
                 </div>
               : <div style={{ marginTop: open ? envSize * 0.45 : 0, transition: 'margin .5s' }}><Envelope design={design} open={open} pulled={pulled} size={envSize} paper={paperEl} onClick={() => { if (pulled) setPulled(false); else setOpen(!open); }} onPaperClick={() => setPulled(!pulled)} /></div>}
           </div>
