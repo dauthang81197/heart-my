@@ -7,7 +7,7 @@ import { Spinner } from '../components/UI';
 
 const Wrap = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <div className="auth">
-    <Logo to="/" style={{ justifyContent: 'center', marginBottom: 20 }} />
+    <Logo to="/" style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }} />
     <div className="card"><h2>{title}</h2>{children}</div>
   </div>
 );

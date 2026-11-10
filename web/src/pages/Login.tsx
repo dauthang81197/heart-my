@@ -23,7 +23,7 @@ export default function Login() {
   };
   return (
     <div className="auth">
-      <Logo to="/" style={{ justifyContent: 'center', marginBottom: 20 }} />
+      <Logo to="/" style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }} />
       <div className="card">
         <div className="tabs2">
           <button className={mode === 'login' ? 'on' : ''} onClick={() => setMode('login')}>Đăng nhập</button>
