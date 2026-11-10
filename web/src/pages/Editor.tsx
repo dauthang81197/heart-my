@@ -11,6 +11,7 @@ import AppHeader from '../components/AppHeader';
 import AudioRecorder from '../components/AudioRecorder';
 import { MAX_BYTES, MAX_PAGES, processHandwriting } from '../handwriting';
 import { Spinner, useUI } from '../components/UI';
+import { TEMPLATES, Template } from '../templates';
 import { tapeTile } from '../components/paperDeco';
 import { FONT_GROUPS, loadRecent, Preset, PRESET_GROUPS, pushRecent, STICKER_PACKS, TAPE_COLORS, TAPE_PATTERNS } from '../stickers';
 
@@ -50,6 +51,7 @@ export default function Editor() {
   const [pg, setPg] = useState(0);
   const [handBusy, setHandBusy] = useState('');
   const [pulled, setPulled] = useState(false);
+  const [tplOpen, setTplOpen] = useState(false);
   const [pack, setPack] = useState('love');
   const [glyphColor, setGlyphColor] = useState('#c9788a');
   const [tapeK, setTapeK] = useState('stripes');
@@ -74,6 +76,7 @@ export default function Editor() {
       const d = normalizeDesign(l.design, l.envelope);
       setLetter(l); setTitle(l.title); setDesign(d);
       if (d.items.length || d.pages.length || d.images.length || d.audios.length || l.title) setStep('content');
+      else { try { if (!sessionStorage.getItem('hp_tpl_' + id)) { sessionStorage.setItem('hp_tpl_' + id, '1'); setTplOpen(true); } } catch { setTplOpen(true); } }
       loaded.current = true;
     }).catch(() => nav('/app'));
   }, [id]);
@@ -161,6 +164,12 @@ export default function Editor() {
     setPg((p) => Math.max(0, Math.min(p, design.pages.length - 2))); setSel(null);
   };
 
+  const applyTemplate = async (t: Template) => {
+    if (design.items.length && !(await confirm({ message: 'Áp dụng mẫu sẽ thay giao diện và các đối tượng đang có trên thư (ảnh chữ viết tay, ảnh đính kèm và ghi âm được giữ lại). Tiếp tục?', okText: 'Áp dụng' }))) return;
+    const items = t.items.map((it) => ({ ...it, id: uid(), page: 0 })) as Item[];
+    commit({ ...design, env: { ...t.env }, seal: { ...t.seal }, paper: { ...t.paper }, items });
+    setTplOpen(false); setPg(0); setSel(null); setStep('content'); setSub((x) => ({ ...x, content: 'text' })); toast(`Đã áp dụng mẫu “${t.n}”`);
+  };
   const goSend = async () => {
     await api(`/letters/${id}`, { method: 'PATCH', body: { title, envelope: design.env.model, design } });
     nav(`/send/${id}`);
@@ -329,7 +338,7 @@ export default function Editor() {
         </div>
         <h4>Mẫu câu & tiêu đề dựng sẵn</h4>
         {PRESET_GROUPS.map((g) => <div key={g.n} style={{ marginBottom: 8 }}><div className="muted" style={{ fontSize: '.78rem', marginBottom: 4 }}>{g.n}</div>
-          <div className="fontgrid">{g.items.map((pr) => <button key={pr.label} className="fontchip" style={{ fontFamily: `"${pr.fontFamily}", serif`, color: pr.fill }} onClick={() => addPreset(pr)}>{pr.label}</button>)}</div></div>)}
+          <div className="fontgrid">{g.items.map((pr) => <button key={pr.label} className="fontchip pre" style={{ fontFamily: `"${pr.fontFamily}", serif`, color: pr.fill }} onClick={() => addPreset(pr)}>{pr.label}</button>)}</div></div>)}
         <h4>Vẽ tay</h4>
         <div className="row">{INKS.map((c) => <span key={c} className={'swatch' + (brush.color === c ? ' on' : '')} style={{ background: c }} onClick={() => { setBrush({ ...brush, color: c }); setTool('draw'); }} />)}</div>
         <div className="row" style={{ marginTop: 8 }}><input type="range" min={1} max={30} value={brush.size} onChange={(ev) => setBrush({ ...brush, size: +ev.target.value })} /><span className="muted">{brush.size}px</span>
@@ -342,6 +351,17 @@ export default function Editor() {
   return (
     <div className="ed2">
       <AppHeader />
+      {tplOpen && <div className="modal-bg" onClick={() => setTplOpen(false)}>
+        <div className="modal tplmodal" role="dialog" aria-label="Mẫu thư" onClick={(ev) => ev.stopPropagation()}>
+          <div className="tpl-head"><div><h3 style={{ margin: 0 }}>Chọn mẫu thư</h3><p className="muted" style={{ margin: '4px 0 0', fontSize: '.88rem' }}>Một chạm là có phong thư, giấy và bố cục đẹp — bạn chỉ cần sửa lời.</p></div>
+            <button className="btn ghost sm" onClick={() => setTplOpen(false)}>Bắt đầu từ trang trống</button></div>
+          <div className="tplgrid">{TEMPLATES.map((t) => (
+            <button key={t.k} className="tplcard" onClick={() => applyTemplate(t)}>
+              <div className="tplprev"><LetterCanvas design={{ ...design, env: t.env, seal: t.seal, paper: t.paper, pages: [], items: t.items.map((it, i) => ({ ...it, id: 'p' + i })) as Item[] }} width={132} /></div>
+              <b>{t.icon} {t.n}</b>
+            </button>))}</div>
+        </div>
+      </div>}
       <div className="ed2-main">
         <section className="ed2-panel">
           <div className="tabbar">
@@ -350,7 +370,7 @@ export default function Editor() {
             <div className="tools"><button onClick={undo} disabled={!past.current.length} title="Hoàn tác">↶</button><button onClick={redo} disabled={!future.current.length} title="Làm lại">↷</button><span /><button onClick={trash} title="Xoá thư">🗑</button></div>
           </div>
           <div className="seg">{SUBS[step].map(([k, n]) => <button key={k} className={sub[step] === k ? 'on' : ''} onClick={() => setSub({ ...sub, [step]: k })}>{n}</button>)}</div>
-          <div className="panel-hint">{HINTS[step]}</div>
+          <div className="panel-hint">{HINTS[step]} <button className="tplbtn" onClick={() => setTplOpen(true)}>✨ Mẫu thư dựng sẵn</button></div>
           <div className="panel-body">{panel}</div>
         </section>
 

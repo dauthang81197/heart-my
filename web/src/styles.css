@@ -438,3 +438,15 @@ header.nav .btn { border-radius:99px; }
 .tabbar .sendbtn { margin:0 0 0 4px; background:var(--acc); color:var(--on-acc); }
 .tabbar .tools { margin-left:auto; }
 @media (max-width:860px) { .appnav { display:none; } }
+
+/* ===== Mẫu thư ===== */
+.tplbtn { margin-left:6px; border:1px solid var(--acc); background:var(--acc-soft); color:var(--acc); border-radius:99px; padding:3px 11px; cursor:pointer; font-size:.78rem; font-style:normal; font-family:inherit; white-space:nowrap; }
+.tplbtn:hover { background:var(--acc); color:var(--on-acc); }
+.modal.tplmodal { max-width:900px; width:min(900px,94vw); max-height:88vh; overflow:auto; padding:22px; }
+.tpl-head { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap; margin-bottom:16px; }
+.tplgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:14px; }
+.tplcard { background:var(--bg); border:1px solid var(--line); border-radius:14px; padding:12px 8px 10px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:8px; color:var(--fg); font-size:.86rem; }
+.tplcard:hover { border-color:var(--acc); transform:translateY(-3px); box-shadow:0 10px 22px #0006; }
+.tplprev { line-height:0; } .tplprev .paper { filter:drop-shadow(0 4px 10px #0008); }
+@media (max-width:860px) { .panel-hint { display:block; } .tplgrid { grid-template-columns:repeat(2,1fr); } }
+.fontchip.pre { background:#f7f2e8; border-color:#d9cdb4; } .fontchip.pre:hover { border-color:var(--acc); background:#fff; }
