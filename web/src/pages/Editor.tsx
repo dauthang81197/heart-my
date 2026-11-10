@@ -2,7 +2,7 @@ import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api, Letter, uploadFile } from '../api';
 import {
-  Design, ENV_COLORS, ENV_PATTERNS, Item, MODELS, nameOf, normalizeDesign, PAPER_COLORS, PAPER_KINDS, PAPER_PATTERNS,
+  BORDER_COLORS, Design, ENV_COLORS, ENV_PATTERNS, Item, MODELS, nameOf, normalizeDesign, PAPER_BORDERS, PAPER_COLORS, PAPER_FX, PAPER_KINDS, PAPER_PATTERNS,
   SEAL_COLORS, SEAL_EMBLEMS, W, pageCount,
 } from '../design';
 import LetterCanvas from '../components/LetterCanvas';
@@ -11,10 +11,11 @@ import AppHeader from '../components/AppHeader';
 import AudioRecorder from '../components/AudioRecorder';
 import { MAX_BYTES, MAX_PAGES, processHandwriting } from '../handwriting';
 import { Spinner, useUI } from '../components/UI';
+import { tapeTile } from '../components/paperDeco';
+import { FONT_GROUPS, loadRecent, Preset, PRESET_GROUPS, pushRecent, STICKER_PACKS, TAPE_COLORS, TAPE_PATTERNS } from '../stickers';
 
-const FONTS = ['Dancing Script', 'Caveat', 'Playfair Display', 'Inter', 'Be Vietnam Pro', 'Georgia', 'Courier New'];
 const INKS = ['#1f2328', '#7a1f2b', '#1f4a4a', '#26324d', '#8a5a2b', '#c0392b', '#d4a93c', '#6b4c9a', '#ffffff'];
-const STICKERS = ['❤️', '💌', '🌸', '🌹', '⭐', '🌙', '☀️', '🦋', '🕊️', '🍀', '🎀', '✨', '🌻', '🍂', '☕', '🎁', '🧸', '🎈', '🐱', '🐶', '📮', '🪶', '🕯️', '🎶'];
+const tapeUrl = (k: string, c: string) => { const t = tapeTile(k, c); return t.toDataURL(); };
 const uid = () => Math.random().toString(36).slice(2, 9);
 
 type Step = 'env' | 'seal' | 'paper' | 'content';
@@ -22,8 +23,8 @@ const TABS: [Step, string][] = [['env', 'Phong thư'], ['seal', 'Sáp'], ['paper
 const SUBS: Record<Step, [string, string][]> = {
   env: [['model', 'Mẫu mã'], ['pattern', 'Họa tiết'], ['color', 'Màu sắc']],
   seal: [['color', 'Màu sáp'], ['emblem', 'Biểu tượng']],
-  paper: [['kind', 'Loại giấy'], ['pattern', 'Họa tiết'], ['color', 'Màu giấy']],
-  content: [['hand', 'Chữ viết tay'], ['text', 'Soạn thảo'], ['photos', 'Ảnh đính kèm'], ['audio', 'Ghi âm']],
+  paper: [['kind', 'Loại giấy'], ['pattern', 'Họa tiết'], ['color', 'Màu giấy'], ['border', 'Viền'], ['fx', 'Hiệu ứng']],
+  content: [['hand', 'Chữ viết tay'], ['text', 'Soạn thảo'], ['sticker', 'Sticker'], ['deco', 'Băng dính'], ['photos', 'Ảnh đính kèm'], ['audio', 'Ghi âm']],
 };
 
 function Card({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) {
@@ -43,6 +44,11 @@ export default function Editor() {
   const [pg, setPg] = useState(0);
   const [handBusy, setHandBusy] = useState('');
   const [pulled, setPulled] = useState(false);
+  const [pack, setPack] = useState('love');
+  const [glyphColor, setGlyphColor] = useState('#c9788a');
+  const [tapeK, setTapeK] = useState('stripes');
+  const [tapeC, setTapeC] = useState(TAPE_COLORS[0]);
+  const [recent, setRecent] = useState<string[]>(() => loadRecent());
   const [full, setFull] = useState(false);
   const [grid, setGrid] = useState(true);
   const [sel, setSel] = useState<string | null>(null);
@@ -160,7 +166,7 @@ export default function Editor() {
   const mob = box.w < 700; // preview mobile: canvas gần full chiều rộng
   const cw = mob ? Math.max(200, Math.min(W, box.w - 20, (box.h - 110) * 0.75)) : Math.max(220, Math.min(W, box.w - 90, (box.h - 130) * 0.75));
   const paperEl = <LetterCanvas design={design} width={Math.round(envSize * 0.84)} />;
-  const miniPaper = (k?: string, pattern?: string, color?: string) => ({ ...design, items: [], paper: { kind: k ?? pp.kind, pattern: pattern ?? pp.pattern, color: color ?? pp.color } });
+  const miniPaper = (k?: string, pattern?: string, color?: string, border?: string, fx?: string) => ({ ...design, items: [], pages: [], paper: { ...pp, kind: k ?? pp.kind, pattern: pattern ?? pp.pattern, color: color ?? pp.color, border: border ?? pp.border, fx: fx ?? pp.fx } });
 
   const panel = (() => {
     const s = sub[step];
@@ -176,6 +182,13 @@ export default function Editor() {
     if (step === 'paper') {
       if (s === 'kind') return <div className="cards">{PAPER_KINDS.map((m) => <Card key={m.k} on={pp.kind === m.k} onClick={() => set({ paper: { ...pp, kind: m.k } })}><div className="mini"><LetterCanvas design={miniPaper(m.k)} width={48} /></div><span>{m.n}</span></Card>)}</div>;
       if (s === 'pattern') return <div className="cards">{PAPER_PATTERNS.map((m) => <Card key={m.k} on={pp.pattern === m.k} onClick={() => set({ paper: { ...pp, pattern: m.k } })}><div className="mini"><LetterCanvas design={miniPaper(undefined, m.k)} width={48} /></div><span>{m.n}</span></Card>)}</div>;
+      if (s === 'border') return <div className="pad">
+        <div className="cards">{PAPER_BORDERS.map((m) => <Card key={m.k} on={(pp.border ?? 'none') === m.k} onClick={() => set({ paper: { ...pp, border: m.k } })}><div className="mini"><LetterCanvas design={miniPaper(undefined, undefined, undefined, m.k)} width={48} /></div><span>{m.n}</span></Card>)}</div>
+        <h4>Màu viền</h4>
+        <div className="row">{BORDER_COLORS.map((c) => <span key={c} className={'swatch' + (pp.borderColor === c ? ' on' : '')} style={{ background: c }} onClick={() => set({ paper: { ...pp, borderColor: c } })} />)}
+          <label className="swatch custom" title="Chọn màu khác"><input type="color" value={pp.borderColor ?? '#c9788a'} onChange={(ev) => set({ paper: { ...pp, borderColor: ev.target.value } })} /></label></div>
+      </div>;
+      if (s === 'fx') return <div className="cards">{PAPER_FX.map((m) => <Card key={m.k} on={(pp.fx ?? 'none') === m.k} onClick={() => set({ paper: { ...pp, fx: m.k } })}><div className="mini"><LetterCanvas design={miniPaper(undefined, undefined, undefined, undefined, m.k)} width={48} /></div><span>{m.n}</span></Card>)}</div>;
       return <div className="cards">{PAPER_COLORS.map((m) => <Card key={m.c} on={pp.color === m.c} onClick={() => set({ paper: { ...pp, color: m.c } })}><i className="dot" style={{ background: m.c }} /><span>{m.n}</span></Card>)}</div>;
     }
     if (s === 'photos') return (
@@ -232,7 +245,72 @@ export default function Editor() {
         <AudioRecorder disabled={design.audios.length >= 3} onSaved={(a) => commit({ ...design, audios: [...design.audios, a] })} />
         {design.audios.map((a, i) => <div key={a.url} className="aud"><audio controls src={a.url} preload="metadata" /><button className="btn danger sm" onClick={() => set({ audios: design.audios.filter((_, j) => j !== i) })}>Xoá</button></div>)}
       </div>);
+    const selPanel = selected && <>
+      <h4>Đối tượng đang chọn</h4>
+      <div className="row"><button className="btn ghost sm" onClick={() => add({ ...selected, id: undefined as any, x: selected.x + 24, y: selected.y + 24 })}>Nhân bản</button><button className="btn ghost sm" onClick={() => order(1)}>↑ Lên trên</button><button className="btn ghost sm" onClick={() => order(-1)}>↓ Xuống dưới</button><button className="btn danger sm" onClick={delSel}>Xoá</button></div>
+      <div className="row" style={{ marginTop: 8 }}><span className="muted">Độ mờ</span><input type="range" min={20} max={100} value={Math.round((selected.opacity ?? 1) * 100)} onChange={(ev) => patchSel({ opacity: +ev.target.value / 100 })} /></div>
+      {selected.type === 'sticker' && selected.fill !== undefined && <div className="row" style={{ marginTop: 8 }}>{[...INKS, '#c9788a', '#b8892b'].map((c) => <span key={c} className={'swatch' + (selected.fill === c ? ' on' : '')} style={{ background: c }} onClick={() => patchSel({ fill: c })} />)}</div>}
+      {selected.type === 'tape' && <>
+        <div className="tapegrid" style={{ marginTop: 8 }}>{TAPE_PATTERNS.map((t) => <button key={t.k} title={t.n} className={'tapechip' + (selected.text === t.k ? ' on' : '')} style={{ backgroundImage: `url(${tapeUrl(t.k, selected.fill ?? tapeC)})` }} onClick={() => patchSel({ text: t.k })} />)}</div>
+        <div className="row" style={{ marginTop: 8 }}>{TAPE_COLORS.map((c) => <span key={c} className={'swatch' + (selected.fill === c ? ' on' : '')} style={{ background: c }} onClick={() => patchSel({ fill: c })} />)}</div>
+      </>}
+      {selected.type === 'text' && <>
+        <textarea className="input" rows={4} style={{ marginTop: 10 }} value={selected.text} onChange={(ev) => patchSel({ text: ev.target.value })} />
+        <h4>Phông chữ</h4>
+        {FONT_GROUPS.map((g) => <div key={g.n}><div className="muted" style={{ fontSize: '.78rem', margin: '6px 0 4px' }}>{g.n}</div>
+          <div className="fontgrid">{g.fonts.map((f) => <button key={f} className={'fontchip' + (selected.fontFamily === f ? ' on' : '')} style={{ fontFamily: `"${f}", serif` }} onClick={() => patchSel({ fontFamily: f })}>{f}</button>)}</div></div>)}
+        <div className="row" style={{ marginTop: 10 }}><span className="muted">Cỡ chữ</span>
+          <input type="number" className="input" style={{ width: 80 }} min={12} max={140} value={Math.round(selected.fontSize ?? 28)} onChange={(ev) => patchSel({ fontSize: +ev.target.value })} /></div>
+        <div className="row" style={{ marginTop: 8 }}>{INKS.map((c) => <span key={c} className={'swatch' + (selected.fill === c ? ' on' : '')} style={{ background: c }} onClick={() => patchSel({ fill: c })} />)}
+          <label className="swatch custom" title="Chọn màu khác"><input type="color" value={selected.fill ?? '#1f2328'} onChange={(ev) => patchSel({ fill: ev.target.value })} /></label></div>
+        <div className="row" style={{ marginTop: 8 }}>
+          <button className={'chip t' + (selected.bold ? ' on' : '')} onClick={() => patchSel({ bold: !selected.bold })}><b>B</b></button>
+          <button className={'chip t' + (selected.italic ? ' on' : '')} onClick={() => patchSel({ italic: !selected.italic })}><i>I</i></button>
+          <button className={'chip t' + (selected.underline ? ' on' : '')} onClick={() => patchSel({ underline: !selected.underline })}><u>U</u></button>
+          <button className={'chip t' + (selected.shadow ? ' on' : '')} onClick={() => patchSel({ shadow: !selected.shadow })}>Bóng</button>
+          <button className={'chip t' + (selected.outline ? ' on' : '')} onClick={() => patchSel({ outline: selected.outline ? undefined : (selected.fill === '#ffffff' ? '#1f2328' : '#ffffff') })}>Viền chữ</button>
+          {(['left', 'center', 'right'] as const).map((a) => <button key={a} className={'chip t' + (selected.align === a ? ' on' : '')} onClick={() => patchSel({ align: a })}>{{ left: '⬅', center: '↔', right: '➡' }[a]}</button>)}</div>
+        <div className="row" style={{ marginTop: 8 }}><span className="muted">Giãn chữ</span><input type="range" min={0} max={16} value={selected.spacing ?? 0} onChange={(ev) => patchSel({ spacing: +ev.target.value })} /></div>
+      </>}
+    </>;
+
+    if (s === 'sticker') {
+      const cur = pack === 'recent' ? null : STICKER_PACKS.find((x) => x.k === pack) ?? STICKER_PACKS[0];
+      const list = cur ? cur.items : recent;
+      const glyph = !!cur?.glyph;
+      const put = (st: string) => {
+        const g = recent.includes(st) && !cur ? STICKER_PACKS.some((x) => x.glyph && x.items.includes(st)) : glyph;
+        add({ type: 'sticker', text: st, fontSize: cur?.size ?? (g ? 56 : 64), ...(g ? { fill: glyphColor } : {}) });
+        pushRecent(st); setRecent(loadRecent());
+      };
+      return <div className="pad">
+        <div className="packtabs">
+          {recent.length > 0 && <button className={pack === 'recent' ? 'on' : ''} onClick={() => setPack('recent')}>🕘 Gần đây</button>}
+          {STICKER_PACKS.map((x) => <button key={x.k} className={pack === x.k ? 'on' : ''} onClick={() => setPack(x.k)}>{x.icon} {x.n}</button>)}
+        </div>
+        {glyph && <div className="row" style={{ margin: '10px 0 2px' }}><span className="muted">Màu</span>{[...INKS, '#c9788a', '#b8892b'].map((c) => <span key={c} className={'swatch' + (glyphColor === c ? ' on' : '')} style={{ background: c }} onClick={() => setGlyphColor(c)} />)}</div>}
+        <div className={'stk-grid' + (cur?.k === 'divider' ? ' wide' : '')}>{list.map((st) => <button key={st} className="stk" style={glyph ? { color: glyphColor } : undefined} onClick={() => put(st)}>{st}</button>)}</div>
+        <p className="muted" style={{ fontSize: '.8rem' }}>Bấm để thả vào lá thư, sau đó kéo, xoay, phóng to trên giấy.</p>
+        {selPanel}
+      </div>;
+    }
+    if (s === 'deco') return (
+      <div className="pad">
+        <h4>Băng dính washi</h4>
+        <div className="tapegrid">{TAPE_PATTERNS.map((t) => <button key={t.k} title={t.n} className={'tapechip' + (tapeK === t.k ? ' on' : '')} style={{ backgroundImage: `url(${tapeUrl(t.k, tapeC)})` }} onClick={() => setTapeK(t.k)} />)}</div>
+        <div className="row" style={{ marginTop: 8 }}>{TAPE_COLORS.map((c) => <span key={c} className={'swatch' + (tapeC === c ? ' on' : '')} style={{ background: c }} onClick={() => setTapeC(c)} />)}</div>
+        <div className="row" style={{ marginTop: 10 }}>
+          <button className="btn sm" onClick={() => add({ type: 'tape', text: tapeK, fill: tapeC, width: 170, height: 38, rotation: -6 })}>＋ Dán băng dính</button>
+          <button className="btn ghost sm" onClick={() => add({ type: 'tape', text: tapeK, fill: tapeC, width: 90, height: 34, rotation: 38 })}>＋ Miếng góc</button>
+        </div>
+        <h4>Ghim, kẹp & dấu</h4>
+        <div className="chips">{['📌', '📍', '📎', '🖇️', '🧷', '🔖', '🏷️', '✂️', '🗝️', '🕰️', '📮', '💌'].map((st) => <span key={st} className="chip" onClick={() => { add({ type: 'sticker', text: st, fontSize: 56 }); pushRecent(st); setRecent(loadRecent()); }}>{st}</span>)}</div>
+        <p className="muted" style={{ fontSize: '.8rem', marginTop: 10 }}>Dán băng dính đè lên mép ảnh hoặc góc giấy để tạo cảm giác như thư thật. Dấu đóng (AIR MAIL, WITH LOVE…) nằm ở tab <b>Soạn thảo</b>.</p>
+        {selPanel}
+      </div>);
+
     // text (soạn thảo)
+    const addPreset = (pr: Preset) => add({ type: 'text', text: pr.text, fontFamily: pr.fontFamily, fontSize: pr.fontSize, fill: pr.fill, bold: pr.bold, italic: pr.italic, align: pr.align, width: pr.width ?? 440, rotation: pr.rotation, shadow: pr.shadow, outline: pr.outline, spacing: pr.spacing, underline: pr.underline, opacity: pr.opacity });
     return (
       <div className="pad">
         <h4>Thêm vào lá thư</h4>
@@ -241,26 +319,14 @@ export default function Editor() {
           <button className="btn ghost sm" onClick={() => add({ type: 'text', text: 'Tiêu đề', fontFamily: 'Playfair Display', fontSize: 40, bold: true, fill: '#7a1f2b', width: 400 })}>＋ Tiêu đề</button>
           <label className="btn ghost sm" style={{ cursor: 'pointer' }}>🖼 Ảnh dán<input type="file" accept="image/*" hidden onChange={(ev) => { uploadImages(ev.target.files, true); ev.target.value = ''; }} /></label>
         </div>
+        <h4>Mẫu câu & tiêu đề dựng sẵn</h4>
+        {PRESET_GROUPS.map((g) => <div key={g.n} style={{ marginBottom: 8 }}><div className="muted" style={{ fontSize: '.78rem', marginBottom: 4 }}>{g.n}</div>
+          <div className="fontgrid">{g.items.map((pr) => <button key={pr.label} className="fontchip" style={{ fontFamily: `"${pr.fontFamily}", serif`, color: pr.fill }} onClick={() => addPreset(pr)}>{pr.label}</button>)}</div></div>)}
         <h4>Vẽ tay</h4>
         <div className="row">{INKS.map((c) => <span key={c} className={'swatch' + (brush.color === c ? ' on' : '')} style={{ background: c }} onClick={() => { setBrush({ ...brush, color: c }); setTool('draw'); }} />)}</div>
         <div className="row" style={{ marginTop: 8 }}><input type="range" min={1} max={30} value={brush.size} onChange={(ev) => setBrush({ ...brush, size: +ev.target.value })} /><span className="muted">{brush.size}px</span>
           <button className={'btn sm' + (tool === 'draw' ? '' : ' ghost')} onClick={() => setTool(tool === 'draw' ? 'select' : 'draw')}>{tool === 'draw' ? '✏️ Đang vẽ — bấm để dừng' : '✏️ Bật vẽ'}</button></div>
-        <h4>Sticker</h4><div className="chips">{STICKERS.map((st) => <span key={st} className="chip" onClick={() => add({ type: 'sticker', text: st, fontSize: 64 })}>{st}</span>)}</div>
-        {selected && <>
-          <h4>Đối tượng đang chọn</h4>
-          <div className="row"><button className="btn ghost sm" onClick={() => add({ ...selected, id: undefined as any, x: selected.x + 24, y: selected.y + 24 })}>Nhân bản</button><button className="btn ghost sm" onClick={() => order(1)}>↑</button><button className="btn ghost sm" onClick={() => order(-1)}>↓</button><button className="btn danger sm" onClick={delSel}>Xoá</button></div>
-          {selected.type === 'text' && <>
-            <textarea className="input" rows={4} style={{ marginTop: 10 }} value={selected.text} onChange={(ev) => patchSel({ text: ev.target.value })} />
-            <div className="row" style={{ marginTop: 8 }}>
-              <select className="input" style={{ flex: 1 }} value={selected.fontFamily} onChange={(ev) => patchSel({ fontFamily: ev.target.value })}>{FONTS.map((f) => <option key={f}>{f}</option>)}</select>
-              <input type="number" className="input" style={{ width: 80 }} min={12} max={120} value={Math.round(selected.fontSize ?? 28)} onChange={(ev) => patchSel({ fontSize: +ev.target.value })} /></div>
-            <div className="row" style={{ marginTop: 8 }}>{INKS.map((c) => <span key={c} className={'swatch' + (selected.fill === c ? ' on' : '')} style={{ background: c }} onClick={() => patchSel({ fill: c })} />)}</div>
-            <div className="row" style={{ marginTop: 8 }}>
-              <button className={'chip t' + (selected.bold ? ' on' : '')} onClick={() => patchSel({ bold: !selected.bold })}><b>B</b></button>
-              <button className={'chip t' + (selected.italic ? ' on' : '')} onClick={() => patchSel({ italic: !selected.italic })}><i>I</i></button>
-              {(['left', 'center', 'right'] as const).map((a) => <button key={a} className={'chip t' + (selected.align === a ? ' on' : '')} onClick={() => patchSel({ align: a })}>{{ left: '⬅', center: '↔', right: '➡' }[a]}</button>)}</div>
-          </>}
-        </>}
+        {selPanel}
         <label className="f" style={{ marginTop: 16 }}>Tên thư<input className="input" value={title} onChange={(ev) => setTitle(ev.target.value)} placeholder="Ví dụ: Gửi em…" /></label>
       </div>);
   })();

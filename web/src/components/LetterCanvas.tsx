@@ -3,6 +3,7 @@ import { Circle, Group, Image as KImage, Layer, Line, Rect, Stage, Text, Transfo
 import useImage from 'use-image';
 import Konva from 'konva';
 import { Design, defaultDesign, H, Item, W } from '../design';
+import { Border, Fx, tapeTile } from './paperDeco';
 
 export { W, H };
 export type { Item, Design };
@@ -63,7 +64,12 @@ const ROUNDED = roundedPts(36), SCALLOP = scallopPts(22), CUT = cutPts(44);
 const clipPts = (pts: number[]) => (ctx: any) => { ctx.beginPath(); ctx.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]); ctx.closePath(); };
 
 function PaperShape({ paper }: { paper: Design['paper'] }) {
-  const base = <><Rect name="bg" width={W} height={H} fill={paper.color} /><Pattern kind={paper.pattern} /></>;
+  const base = <><Rect name="bg" width={W} height={H} fill={paper.color} /><Pattern kind={paper.pattern} /><Fx kind={paper.fx ?? 'none'} /></>;
+  const border = <Border kind={paper.border ?? 'none'} color={/^#[0-9a-f]{6}$/i.test(paper.borderColor ?? '') ? paper.borderColor! : '#c9788a'} />;
+  return <>{paperBody(paper, base)}{border}</>;
+}
+
+function paperBody(paper: Design['paper'], base: JSX.Element): JSX.Element {
   if (paper.kind === 'stamp') {
     const holes: JSX.Element[] = [];
     for (let x = 12; x < W; x += 24) { holes.push(<Circle key={'t' + x} x={x} y={0} radius={8} fill="#000" globalCompositeOperation="destination-out" listening={false} />, <Circle key={'b' + x} x={x} y={H} radius={8} fill="#000" globalCompositeOperation="destination-out" listening={false} />); }
@@ -176,7 +182,7 @@ const LetterCanvas = forwardRef<CanvasHandle, Props>(function LetterCanvas(
         {design.pages?.[page] && <PageImg src={design.pages[page]} ink={design.pageInk?.[page]} />}
         {design.items.filter((it) => (it.page ?? 0) === page).map((it) => {
           const common = {
-            key: it.id, id: it.id, x: it.x, y: it.y, rotation: it.rotation ?? 0,
+            key: it.id, id: it.id, x: it.x, y: it.y, rotation: it.rotation ?? 0, opacity: it.opacity ?? 1,
             draggable: editable && tool === 'select',
             onClick: () => editable && tool === 'select' && onSelect?.(it.id),
             onTap: () => editable && tool === 'select' && onSelect?.(it.id),
@@ -184,16 +190,21 @@ const LetterCanvas = forwardRef<CanvasHandle, Props>(function LetterCanvas(
             onTransformEnd: (e: any) => {
               const n = e.target as Konva.Node; const sx = n.scaleX(), sy = n.scaleY();
               n.scaleX(1); n.scaleY(1);
-              if (it.type === 'image') upd(it.id, { x: n.x(), y: n.y(), rotation: n.rotation(), width: n.width() * sx, height: n.height() * sy });
+              if (it.type === 'image' || it.type === 'tape') upd(it.id, { x: n.x(), y: n.y(), rotation: n.rotation(), width: n.width() * sx, height: n.height() * sy });
               else if (it.type === 'sticker') upd(it.id, { x: n.x(), y: n.y(), rotation: n.rotation(), fontSize: (it.fontSize ?? 64) * sx });
               else upd(it.id, { x: n.x(), y: n.y(), rotation: n.rotation(), width: Math.max(40, n.width() * sx), fontSize: (it.fontSize ?? 28) * (sy > 0 ? sy : 1) });
             },
           };
           if (it.type === 'line') return <Line {...common} points={it.points} stroke={it.stroke} strokeWidth={it.strokeWidth} lineCap="round" lineJoin="round" tension={0.4} listening={!!editable && tool === 'select'} hitStrokeWidth={Math.max(20, it.strokeWidth ?? 0)} shadowColor="#8aa4b5" shadowBlur={selectedId === it.id ? 12 : 0} />;
           if (it.type === 'image') return <Img item={it} {...common} width={it.width} height={it.height} />;
-          if (it.type === 'sticker') return <Text {...common} text={it.text} fontSize={it.fontSize ?? 64} />;
+          if (it.type === 'tape') return <Rect {...common} width={it.width ?? 150} height={it.height ?? 38} fillPatternImage={tapeTile(it.text ?? 'solid', it.fill ?? '#f4b6c2') as any} fillPatternScale={{ x: 0.5, y: 0.5 }}
+            shadowColor="#000" shadowBlur={4} shadowOpacity={0.18} shadowOffsetY={1.5} />;
+          if (it.type === 'sticker') return <Text {...common} text={it.text} fontSize={it.fontSize ?? 64} fill={it.fill} />;
           return <Text {...common} text={it.text} width={it.width ?? 360} fontFamily={it.fontFamily} fontSize={it.fontSize ?? 28} fill={it.fill}
-            fontStyle={`${it.italic ? 'italic ' : ''}${it.bold ? 'bold' : 'normal'}`} align={it.align ?? 'left'} lineHeight={1.3} />;
+            fontStyle={`${it.italic ? 'italic ' : ''}${it.bold ? 'bold' : 'normal'}`} align={it.align ?? 'left'} lineHeight={1.3}
+            letterSpacing={it.spacing ?? 0} textDecoration={it.underline ? 'underline' : ''}
+            stroke={it.outline} strokeWidth={it.outline ? Math.max(1, (it.fontSize ?? 28) / 16) : 0} fillAfterStrokeEnabled
+            shadowColor="#000" shadowBlur={it.shadow ? 5 : 0} shadowOpacity={0.35} shadowOffsetX={it.shadow ? 2 : 0} shadowOffsetY={it.shadow ? 2 : 0} />;
         })}
         {editable && <Transformer ref={tr} rotateEnabled keepRatio={false} borderStroke="#8aa4b5" anchorStroke="#8aa4b5" anchorSize={14} />}
       </Layer>

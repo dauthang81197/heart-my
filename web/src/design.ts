@@ -1,15 +1,16 @@
 export const W = 600, H = 800;
 
 export type Item = {
-  id: string; type: 'text' | 'sticker' | 'image' | 'line';
+  id: string; type: 'text' | 'sticker' | 'image' | 'line' | 'tape';
   x: number; y: number; rotation?: number; page?: number;
   text?: string; fontFamily?: string; fontSize?: number; fill?: string; bold?: boolean; italic?: boolean; align?: string; width?: number;
   src?: string; height?: number;
+  opacity?: number; shadow?: boolean; outline?: string; spacing?: number; underline?: boolean;
   points?: number[]; stroke?: string; strokeWidth?: number;
 };
 export type EnvDesign = { model: string; pattern: string; color: string };
 export type Seal = { color: string; emblem: string };
-export type PaperDesign = { kind: string; color: string; pattern: string };
+export type PaperDesign = { kind: string; color: string; pattern: string; border?: string; borderColor?: string; fx?: string };
 export type Design = {
   env: EnvDesign; seal: Seal; paper: PaperDesign; items: Item[];
   pageInk: (string | null)[]; // màu mực đổi lại cho từng trang (null = màu gốc)
@@ -54,6 +55,16 @@ export const PAPER_PATTERNS = [
   { k: 'plain', n: 'Trơn' }, { k: 'lined', n: 'Kẻ ngang' }, { k: 'grid', n: 'Ô vuông' }, { k: 'dots', n: 'Chấm' },
   { k: 'notebook', n: 'Vở học sinh' }, { k: 'diagonal', n: 'Sọc chéo' }, { k: 'hearts', n: 'Trái tim' }, { k: 'stars', n: 'Ngôi sao' }, { k: 'flowers', n: 'Hoa nhỏ' },
 ];
+export const PAPER_BORDERS = [
+  { k: 'none', n: 'Không viền' }, { k: 'single', n: 'Viền đơn' }, { k: 'double', n: 'Viền đôi' }, { k: 'dashed', n: 'Nét đứt' },
+  { k: 'floral', n: 'Góc hoa' }, { k: 'hearts', n: 'Hàng tim' }, { k: 'stars', n: 'Hàng sao' }, { k: 'lace', n: 'Ren' },
+  { k: 'dots', n: 'Chấm tròn' }, { k: 'ribbon', n: 'Ruy băng' }, { k: 'vines', n: 'Dây lá' }, { k: 'ornate', n: 'Hoàng gia' }, { k: 'lights', n: 'Đèn nháy' },
+];
+export const BORDER_COLORS = ['#c9788a', '#b8892b', '#3a3a3a', '#6f9a7a', '#5b8fc9', '#8b6bb0', '#b3342f', '#ffffff'];
+export const PAPER_FX = [
+  { k: 'none', n: 'Không' }, { k: 'aged', n: 'Ố vàng cổ' }, { k: 'coffee', n: 'Vết cà phê' }, { k: 'foxing', n: 'Đốm thời gian' },
+  { k: 'grain', n: 'Hạt giấy' }, { k: 'crumple', n: 'Nhàu nếp' }, { k: 'wash', n: 'Màu nước' }, { k: 'glitter', n: 'Nhũ lấp lánh' },
+];
 export const PAPER_COLORS = [
   { n: 'Ngà Trắng', c: '#f7f2e8' }, { n: 'Trắng Tinh', c: '#ffffff' }, { n: 'Hồng Nhạt', c: '#fdf0f3' },
   { n: 'Xanh Sương', c: '#eef3f7' }, { n: 'Xanh Lá Nhạt', c: '#f0f5ec' }, { n: 'Vàng Bơ', c: '#fff6dd' },
@@ -67,7 +78,7 @@ const LEGACY_ENV: Record<string, string> = { classic: '#1f4a4a', kraft: '#c9b995
 export const defaultDesign = (): Design => ({
   env: { model: 'classic', pattern: 'none', color: ENV_COLORS[0].c },
   seal: { color: SEAL_COLORS[1].c, emblem: '❤' },
-  paper: { kind: 'ford', color: PAPER_COLORS[0].c, pattern: 'lined' },
+  paper: { kind: 'ford', color: PAPER_COLORS[0].c, pattern: 'lined', border: 'none', borderColor: BORDER_COLORS[0], fx: 'none' },
   items: [], pages: [], pageInk: [], images: [], audios: [],
 });
 
