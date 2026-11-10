@@ -90,7 +90,7 @@ export function normalizeDesign(raw: any, legacyEnvelope?: string): Design {
     env: { ...d.env, ...(legacyEnvelope && LEGACY_ENV[legacyEnvelope] ? { color: LEGACY_ENV[legacyEnvelope] } : {}), ...(raw.env ?? {}) },
     seal: { ...d.seal, ...(raw.seal ?? {}) },
     paper: { ...d.paper, ...(raw.paper ?? {}) },
-    items: Array.isArray(raw.items) ? raw.items.filter((it: any) => it && (it.type !== 'image' || safeUrl(it.src))) : [],
+    items: healIds(Array.isArray(raw.items) ? raw.items.filter((it: any) => it && (it.type !== 'image' || safeUrl(it.src))) : []),
     pageInk: Array.isArray(raw.pageInk) ? raw.pageInk.map((c: unknown) => (typeof c === 'string' ? c : null)) : [],
     pages: Array.isArray(raw.pages) ? raw.pages.filter(safeUrl) : [],
     images: Array.isArray(raw.images) ? raw.images.filter(safeUrl) : [],
@@ -100,3 +100,13 @@ export function normalizeDesign(raw: any, legacyEnvelope?: string): Design {
 export const pageCount = (d: { pages?: string[] }) => Math.max(1, d.pages?.length ?? 0);
 const safeUrl = (u: unknown): u is string => typeof u === 'string' && /^(https?:\/\/|\/uploads\/)/i.test(u);
 export const nameOf = (list: { k?: string; c?: string; n: string }[], v: string) => list.find((x) => x.k === v || x.c === v)?.n ?? '—';
+
+/** Sửa dữ liệu cũ: đối tượng thiếu id hoặc trùng id (do lỗi nhân bản) sẽ không chọn/sửa được. */
+function healIds(items: Item[]): Item[] {
+  const seen = new Set<string>();
+  return items.map((it) => {
+    let id = typeof it.id === 'string' && it.id && !seen.has(it.id) ? it.id : '';
+    while (!id || seen.has(id)) id = 'i' + Math.random().toString(36).slice(2, 9);
+    seen.add(id); return id === it.id ? it : { ...it, id };
+  });
+}

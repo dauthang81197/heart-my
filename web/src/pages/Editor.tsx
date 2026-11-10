@@ -108,7 +108,7 @@ export default function Editor() {
 
   const set = (patch: Partial<Design>) => commit({ ...design, ...patch });
   const add = (it: Partial<Item> & Pick<Item, 'type'>) => {
-    const item = { id: uid(), page: pg, x: 90, y: 120 + (design.items.length % 6) * 50, ...it } as Item;
+    const item = { page: pg, x: 90, y: 120 + (design.items.length % 6) * 50, ...it, id: uid() } as Item; // id luôn mới (kể cả khi nhân bản)
     commit({ ...design, items: [...design.items, item] }); setSel(item.id); setTool('select');
   };
   const selected = design.items.find((i) => i.id === sel);
