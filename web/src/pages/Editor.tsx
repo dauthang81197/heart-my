@@ -157,7 +157,8 @@ export default function Editor() {
 
   const e = design.env, sl = design.seal, pp = design.paper;
   const envSize = Math.max(220, Math.min(520, box.w - 110, (box.h - 150) / 0.68 / 1.3));
-  const cw = Math.max(220, Math.min(W, box.w - 90, (box.h - 130) * 0.75));
+  const mob = box.w < 700; // preview mobile: canvas gần full chiều rộng
+  const cw = mob ? Math.max(200, Math.min(W, box.w - 20, (box.h - 110) * 0.75)) : Math.max(220, Math.min(W, box.w - 90, (box.h - 130) * 0.75));
   const paperEl = <LetterCanvas design={design} width={Math.round(envSize * 0.84)} />;
   const miniPaper = (k?: string, pattern?: string, color?: string) => ({ ...design, items: [], paper: { kind: k ?? pp.kind, pattern: pattern ?? pp.pattern, color: color ?? pp.color } });
 
@@ -278,7 +279,7 @@ export default function Editor() {
           <div className="panel-body">{panel}</div>
         </section>
 
-        <section ref={prev} className={'ed2-prev' + (full ? ' full' : '') + (grid ? ' grid' : '')}>
+        <section ref={prev} className={'ed2-prev' + (full ? ' full' : '') + (grid ? ' grid' : '') + (step === 'content' ? ' content' : '')}>
           <div className="side-tools">
             <button title="Toàn màn hình" onClick={() => setFull(!full)}>⤢</button>
             {step !== 'content' && <>

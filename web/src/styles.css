@@ -247,3 +247,46 @@ label.check { display:flex; gap:8px; align-items:center; margin-top:12px; color:
 .pagetabs button.on { background:var(--acc); color:var(--on-acc); border-color:var(--acc); }
 .swatch.custom { position:relative; overflow:hidden; display:inline-block; background:conic-gradient(#e8a0a8,#e0b04a,#7bc79a,#6b8fd6,#9b6bd6,#e8a0a8); }
 .swatch.custom input { position:absolute; inset:-6px; width:48px; height:48px; opacity:0; cursor:pointer; }
+
+/* ---------- Mobile polish ---------- */
+.paper.editable { touch-action:none; }
+@media (max-width: 860px) {
+  .ed2-prev.content { height:min(140vw, 78dvh); max-height:none; min-height:420px; margin:8px; }
+  .ed2-prev.content .infobar { display:none; }
+  .ed2-prev.content .stage { padding:48px 6px 8px; }
+  .ed2-prev:not(.content) .stage { padding:48px 8px 6px; }
+  .side-tools { flex-direction:row; right:10px; top:8px; padding:3px; }
+  .side-tools button { width:34px; height:34px; }
+  .ed2-prev.full .stage { padding:56px 8px 8px; }
+  .seg { margin:10px 12px; overflow-x:auto; scrollbar-width:none; }
+  .seg::-webkit-scrollbar { display:none; }
+  .seg button { flex:0 0 auto; white-space:nowrap; padding:9px 14px; font-size:.84rem; }
+  .panel-body { padding:0 12px 28px; }
+  .tabbar { padding:0 4px; } .sendbtn { padding:8px 14px; margin:0 6px; }
+  .cards { gap:8px; }
+  .dropzone { padding:24px 14px; } .dropzone .plus { width:48px; height:48px; }
+  .pagelist { gap:8px; }
+  .swatch { width:34px; height:34px; }
+  .btn.sm { padding:9px 13px; }
+  .modal { padding:20px 16px; border-radius:18px; }
+  .view { padding:20px 12px 60px; }
+  .toasts { width:calc(100vw - 24px); }
+  .auth { margin:3vh auto; }
+  .hero h1 { font-size:clamp(2rem,9vw,2.6rem); }
+  .stats { gap:18px; } .stats b { font-size:1.6rem; }
+  .main h2 { font-size:1.3rem; }
+  .letter-card .row { gap:6px; }
+}
+@media (max-width: 380px) {
+  .tab { padding:14px 8px 10px; font-size:.88rem; }
+  .logo { font-size:1.2rem; } .logo i { width:30px; height:30px; }
+  .pagelist { grid-template-columns:repeat(2,1fr); }
+}
+@media (max-width: 860px) {
+  .nav { padding:12px 12px; gap:8px; } .nav-r { gap:8px; min-width:0; }
+  .nav-r a, .nav-r .btn { white-space:nowrap; }
+  .nav .btn { padding:9px 14px; font-size:.85rem; }
+  .nav .logo { font-size:1.15rem; gap:8px; } .nav .logo i { width:28px; height:28px; }
+  .nav .lang button { padding:5px 9px; }
+  .stats { flex-wrap:nowrap; gap:14px; } .stats div { min-width:0; } .stats small { font-size:.72rem; }
+}

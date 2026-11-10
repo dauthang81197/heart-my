@@ -167,7 +167,7 @@ const LetterCanvas = forwardRef<CanvasHandle, Props>(function LetterCanvas(
   const up = () => { if (drawing.current) { drawing.current = false; onChange?.(design, true); } };
 
   return (
-    <Stage ref={stage} width={width} height={H * scale} scaleX={scale} scaleY={scale} className="paper"
+    <Stage ref={stage} width={width} height={H * scale} scaleX={scale} scaleY={scale} className={editable ? 'paper editable' : 'paper'}
       onMouseDown={(e) => { if (e.target === e.target.getStage() || e.target.name() === 'bg') onSelect?.(null); down(); }}
       onTouchStart={(e) => { if (e.target === e.target.getStage() || e.target.name() === 'bg') onSelect?.(null); down(); }}
       onMouseMove={move} onTouchMove={move} onMouseUp={up} onTouchEnd={up}>
