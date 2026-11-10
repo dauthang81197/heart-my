@@ -1,3 +1,4 @@
+import Logo from '../components/Logo';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
@@ -43,7 +44,7 @@ function Head() {
   const { lang, setLang } = useI18n();
   return (
     <div className="vw-head">
-      <Link to="/" className="logo"><i />HeartPost</Link>
+      <Logo to="/" />
       <div className="lang"><button className={lang === 'vi' ? 'on' : ''} onClick={() => setLang('vi')}>VI</button><button className={lang === 'en' ? 'on' : ''} onClick={() => setLang('en')}>EN</button></div>
     </div>
   );

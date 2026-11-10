@@ -1,3 +1,4 @@
+import Logo from '../components/Logo';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, Route, Routes, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { api, Letter, money } from '../api';
@@ -159,7 +160,7 @@ export default function Dashboard() {
   return (
     <div className="shell">
       <aside className="side">
-        <Link to="/" className="logo" style={{ padding: '0 8px 18px' }}><i />HeartPost</Link>
+        <Logo to="/" style={{ padding: '0 8px 18px' }} />
         <button className="btn" onClick={() => setWriting(true)} style={{ marginBottom: 12 }}>✍️ {t('write')}</button>
         {items.map(([to, ic, n]) => <Link key={to} to={to} className={'item' + (loc.pathname === to ? ' on' : '')}>{ic} {n}</Link>)}
         <div className="spacer" />

@@ -1,3 +1,4 @@
+import Logo from '../components/Logo';
 import { FormEvent, useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
@@ -22,7 +23,7 @@ export default function Login() {
   };
   return (
     <div className="auth">
-      <Link to="/" className="logo" style={{ justifyContent: 'center', marginBottom: 20 }}><i />HeartPost</Link>
+      <Logo to="/" style={{ justifyContent: 'center', marginBottom: 20 }} />
       <div className="card">
         <div className="tabs2">
           <button className={mode === 'login' ? 'on' : ''} onClick={() => setMode('login')}>Đăng nhập</button>

@@ -1,4 +1,4 @@
-# HeartPost
+# TrueNote
 
 > 📋 Việc cần cài đặt / cấu hình và checklist kiểm tra: xem [docs/SETUP-CHECKLIST.md](docs/SETUP-CHECKLIST.md)
 

@@ -1,4 +1,4 @@
-# HeartPost — Checklist cài đặt & việc còn lại
+# TrueNote — Checklist cài đặt & việc còn lại
 
 Tick `[x]` khi xong. Domain: `truenote.online` · VPS thư mục: `~/heartpost` · Caddy publish cổng host `8088` (Nginx Proxy Manager trỏ vào đó).
 
@@ -48,7 +48,7 @@ Theo `.env.example`. Những mục **bắt buộc đúng** trước khi mở cho
 - [ ] (Tuỳ chọn) Sentry cho lỗi API/web — chưa tích hợp
 
 ## 8. Nội dung pháp lý
-- [ ] Đổi email liên hệ trong `web/src/pages/Legal.tsx` (đang là `hello@heartpost.local`)
+- [ ] Đổi email liên hệ trong `web/src/pages/Legal.tsx` (đang là `hello@truenote.online`)
 - [ ] Nhờ người có chuyên môn rà soát **Điều khoản** và **Chính sách riêng tư** (đang là bản mẫu); xác nhận chính sách "tem không hoàn tiền"
 
 ## 9. Kiểm tra sau mỗi lần deploy

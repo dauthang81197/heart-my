@@ -1,3 +1,4 @@
+import Logo from '../components/Logo';
 import { Component, lazy, ReactNode, Suspense, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Envelope, { ENVELOPES } from '../components/Envelope';
@@ -28,13 +29,13 @@ export default function Landing() {
   return (
     <>
       <header className="nav">
-        <Link to="/" className="logo"><i />HeartPost</Link>
+        <Logo to="/" />
         <div className="nav-r">
           <div className="lang">
             <button className={lang === 'vi' ? 'on' : ''} onClick={() => setLang('vi')}>VI</button>
             <button className={lang === 'en' ? 'on' : ''} onClick={() => setLang('en')}>EN</button>
           </div>
-          <a className="hide-m" href="mailto:hello@heartpost.local">{t('contact')}</a>
+          <a className="hide-m" href="mailto:hello@truenote.online">{t('contact')}</a>
           <Link to={user ? '/app' : '/login'}>{user ? t('overview') : t('login')}</Link>
           <button className="btn" onClick={go}>{t('write')}</button>
         </div>
@@ -60,7 +61,7 @@ export default function Landing() {
           </div>
         </div>
       </section>
-      <footer className="foot"><Link to="/terms">Điều khoản</Link><Link to="/privacy">Chính sách riêng tư</Link><span>© HeartPost</span></footer>
+      <footer className="foot"><Link to="/terms">Điều khoản</Link><Link to="/privacy">Chính sách riêng tư</Link><span>© TrueNote</span></footer>
     </>
   );
 }

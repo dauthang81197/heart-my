@@ -1,13 +1,14 @@
+import Logo from '../components/Logo';
 import { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
-const CONTACT = 'hello@heartpost.local'; // TODO: đổi thành email liên hệ thật
+const CONTACT = 'hello@truenote.online'; // TODO: đổi thành email liên hệ thật
 const UPDATED = '10/11/2026';
 
 function Shell({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="legal">
-      <Link to="/" className="logo" style={{ marginBottom: 24 }}><i />HeartPost</Link>
+      <Logo to="/" style={{ marginBottom: 24 }} />
       <h1>{title}</h1>
       <p className="muted">Cập nhật lần cuối: {UPDATED}</p>
       {children}
@@ -20,7 +21,7 @@ export function Terms() {
   return (
     <Shell title="Điều khoản sử dụng">
       <h2>1. Dịch vụ</h2>
-      <p>HeartPost là dịch vụ soạn và gửi thư tay kỹ thuật số: bạn thiết kế phong bì, giấy viết, đính kèm ảnh hoặc ghi âm, rồi gửi cho một người, đăng công khai hoặc hẹn giờ gửi. Khi sử dụng dịch vụ, bạn đồng ý với các điều khoản dưới đây.</p>
+      <p>TrueNote là dịch vụ soạn và gửi thư tay kỹ thuật số: bạn thiết kế phong bì, giấy viết, đính kèm ảnh hoặc ghi âm, rồi gửi cho một người, đăng công khai hoặc hẹn giờ gửi. Khi sử dụng dịch vụ, bạn đồng ý với các điều khoản dưới đây.</p>
       <h2>2. Tài khoản</h2>
       <ul>
         <li>Bạn chịu trách nhiệm bảo mật thông tin đăng nhập và mọi hoạt động trên tài khoản của mình.</li>
@@ -35,7 +36,7 @@ export function Terms() {
       </ul>
       <h2>4. Nội dung của bạn</h2>
       <ul>
-        <li>Bạn giữ quyền sở hữu nội dung mình tạo ra và chịu trách nhiệm về nội dung đó. Bạn cấp cho HeartPost quyền lưu trữ và hiển thị nội dung để cung cấp dịch vụ (đến người nhận, hoặc công khai nếu bạn chọn gửi công khai).</li>
+        <li>Bạn giữ quyền sở hữu nội dung mình tạo ra và chịu trách nhiệm về nội dung đó. Bạn cấp cho TrueNote quyền lưu trữ và hiển thị nội dung để cung cấp dịch vụ (đến người nhận, hoặc công khai nếu bạn chọn gửi công khai).</li>
         <li>Thư gửi riêng tư chỉ truy cập được qua liên kết dành cho người nhận. Ai nắm liên kết đều có thể mở thư, vì vậy hãy chỉ chia sẻ liên kết với người bạn tin tưởng.</li>
         <li>Không đăng nội dung vi phạm pháp luật, xâm phạm quyền của người khác, quấy rối, thù ghét, khiêu dâm, lừa đảo, spam hoặc chứa mã độc.</li>
         <li>Không dùng dịch vụ để gửi email hàng loạt không được yêu cầu.</li>
@@ -55,7 +56,7 @@ export function Terms() {
 export function Privacy() {
   return (
     <Shell title="Chính sách riêng tư">
-      <p>Chính sách này giải thích HeartPost thu thập, sử dụng và bảo vệ dữ liệu cá nhân của bạn như thế nào, phù hợp với quy định về bảo vệ dữ liệu cá nhân tại Việt Nam (Nghị định 13/2023/NĐ-CP).</p>
+      <p>Chính sách này giải thích TrueNote thu thập, sử dụng và bảo vệ dữ liệu cá nhân của bạn như thế nào, phù hợp với quy định về bảo vệ dữ liệu cá nhân tại Việt Nam (Nghị định 13/2023/NĐ-CP).</p>
       <h2>1. Dữ liệu chúng tôi thu thập</h2>
       <ul>
         <li><b>Tài khoản:</b> email, tên hiển thị, ảnh đại diện (nếu đăng nhập Google), mật khẩu (lưu dưới dạng băm, không lưu mật khẩu gốc).</li>

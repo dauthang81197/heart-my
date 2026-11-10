@@ -1,3 +1,4 @@
+import Logo from '../components/Logo';
 import { FormEvent, useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
@@ -6,7 +7,7 @@ import { Spinner } from '../components/UI';
 
 const Wrap = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <div className="auth">
-    <Link to="/" className="logo" style={{ justifyContent: 'center', marginBottom: 20 }}><i />HeartPost</Link>
+    <Logo to="/" style={{ justifyContent: 'center', marginBottom: 20 }} />
     <div className="card"><h2>{title}</h2>{children}</div>
   </div>
 );
