@@ -1,5 +1,7 @@
 # HeartPost
 
+> 📋 Việc cần cài đặt / cấu hình và checklist kiểm tra: xem [docs/SETUP-CHECKLIST.md](docs/SETUP-CHECKLIST.md)
+
 React (Vite) + NestJS + PostgreSQL (Prisma). Đăng nhập Google / email-mật khẩu, kho thư, tem thư (mua qua VietQR + webhook SePay), trình soạn thư Konva, gửi riêng tư / công khai / hẹn giờ.
 
 ## Chạy local
