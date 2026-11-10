@@ -1,5 +1,5 @@
 import { FormEvent, useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { api } from '../api';
 import { useAuth } from '../auth';
@@ -7,13 +7,15 @@ import { useAuth } from '../auth';
 export default function Login() {
   const { user, login } = useAuth();
   const nav = useNavigate();
+  const [sp] = useSearchParams();
+  const next = (() => { const n = sp.get('next') ?? ''; return n.startsWith('/') && !n.startsWith('//') ? n : '/app'; })();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [f, setF] = useState({ email: '', password: '', name: '' });
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
-  if (user) return <Navigate to="/app" replace />;
+  if (user) return <Navigate to={next} replace />;
 
-  const done = (r: any) => { login(r); nav('/app'); };
+  const done = (r: any) => { login(r); nav(next); };
   const submit = async (e: FormEvent) => {
     e.preventDefault(); setErr(''); setBusy(true);
     try { done(await api(`/auth/${mode}`, { body: f })); } catch (x: any) { setErr(x.message); } finally { setBusy(false); }

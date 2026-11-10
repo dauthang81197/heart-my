@@ -2,8 +2,8 @@ const TOKEN_KEY = 'hp_token';
 export const getToken = () => localStorage.getItem(TOKEN_KEY);
 export const setToken = (t: string | null) => (t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY));
 
-export async function api<T = any>(path: string, opts: { method?: string; body?: unknown; form?: FormData } = {}): Promise<T> {
-  const headers: Record<string, string> = {};
+export async function api<T = any>(path: string, opts: { method?: string; body?: unknown; form?: FormData; headers?: Record<string, string> } = {}): Promise<T> {
+  const headers: Record<string, string> = { ...opts.headers };
   const t = getToken();
   if (t) headers.Authorization = `Bearer ${t}`;
   if (opts.body) headers['Content-Type'] = 'application/json';
@@ -14,7 +14,7 @@ export async function api<T = any>(path: string, opts: { method?: string; body?:
   });
   if (res.status === 401 && t) { setToken(null); location.href = '/login'; }
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(Array.isArray(data.message) ? data.message[0] : data.message ?? 'Có lỗi xảy ra');
+  if (!res.ok) throw Object.assign(new Error(Array.isArray(data.message) ? data.message[0] : data.message ?? 'Có lỗi xảy ra'), { status: res.status, data });
   return data;
 }
 

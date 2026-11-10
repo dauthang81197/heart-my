@@ -57,10 +57,12 @@ type Props = {
   paper?: ReactNode; onClick?: () => void;
   /** Rút hẳn lá thư ra khỏi phong bì (chỉ có tác dụng khi open). */
   pulled?: boolean; onPaperClick?: () => void;
+  /** Vật nhỏ lấp ló trong phong bì (ảnh polaroid, băng cassette…), hiện khi mở. Toạ độ theo hộp phong bì. */
+  inside?: ReactNode;
 };
 
 /** Phong bì SVG: nắp mở/đóng (lật scaleY), giấy trượt lên khi mở. */
-export default function Envelope({ design, env, seal, open = false, size = 280, stamp, paper, onClick, pulled = false, onPaperClick }: Props) {
+export default function Envelope({ design, env, seal, open = false, size = 280, stamp, paper, onClick, pulled = false, onPaperClick, inside }: Props) {
   // Giai đoạn rút thư: in (nằm trong) → out (nhảy hẳn ra ngoài, sau túi) → over (đáp xuống đè lên phong bì) → lift (nhấc lên lại trước khi cất)
   const [phase, setPhase] = useState<'in' | 'out' | 'over' | 'lift'>('in');
   const want = open && pulled;
@@ -108,6 +110,7 @@ export default function Envelope({ design, env, seal, open = false, size = 280, 
           filter: front ? 'drop-shadow(0 14px 22px #000a)' : 'drop-shadow(0 4px 10px #0006)',
           pointerEvents: open && onPaperClick ? 'auto' : 'none', cursor: open && onPaperClick ? 'pointer' : undefined,
         }}>{paper ?? <div style={{ width: paperW, height: paperW * 1.33, background: '#f7f2e8' }} />}</div>
+        {inside && <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', opacity: open && phase === 'in' ? 1 : 0, transition: `opacity .35s linear ${open ? '.6s' : '0s'}` }}>{inside}</div>}
       </div>
 
       {/* lớp 4: mặt trước (túi) */}

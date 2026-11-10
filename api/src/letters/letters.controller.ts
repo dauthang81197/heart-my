@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, HttpCode, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { IsDateString, IsEmail, IsEnum, IsIn, IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
 import { LetterType } from '@prisma/client';
@@ -16,6 +16,8 @@ class UpdateDto {
   @IsOptional() @IsObject() design?: Record<string, any>;
 }
 class ReportDto { @IsIn(['SPAM', 'ABUSE', 'ADULT', 'COPYRIGHT', 'OTHER']) reason: string; @IsOptional() @IsString() @MaxLength(500) note?: string; }
+class CodeDto { @IsString() @MaxLength(10) code: string; }
+class GoogleViewDto { @IsString() credential: string; }
 class SendDto { @IsString() stampId: string; }
 
 @Controller('letters')
@@ -24,7 +26,10 @@ export class LettersController {
 
   // --- public (khai báo trước :id) ---
   @Get('public/feed') feed() { return this.svc.publicFeed(); }
-  @Get('view/:token') view(@Param('token') t: string) { return this.svc.viewByToken(t); }
+  @Get('view/:token') view(@Param('token') t: string, @Headers('authorization') auth?: string, @Headers('x-view-token') vt?: string) { return this.svc.viewByToken(t, { authorization: auth, viewToken: vt }); }
+  @Post('view/:token/code') @HttpCode(200) @Throttle({ default: { limit: 5, ttl: 60_000 } }) sendCode(@Param('token') t: string) { return this.svc.sendViewCode(t); }
+  @Post('view/:token/verify') @HttpCode(200) @Throttle({ default: { limit: 10, ttl: 60_000 } }) verifyCode(@Param('token') t: string, @Body() d: CodeDto) { return this.svc.verifyViewCode(t, d.code); }
+  @Post('view/:token/google') @HttpCode(200) @Throttle({ default: { limit: 10, ttl: 60_000 } }) viewGoogle(@Param('token') t: string, @Body() d: GoogleViewDto) { return this.svc.viewWithGoogle(t, d.credential); }
 
   @Post('report/:token') @HttpCode(200) @Throttle({ default: { limit: 5, ttl: 60_000 } })
   report(@Param('token') t: string, @Body() d: ReportDto, @Req() req: any) {

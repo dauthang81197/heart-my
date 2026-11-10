@@ -86,6 +86,7 @@ model Letter {
   author         User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
   stamp          Stamp?       @relation(fields: [stampId], references: [id])
   reports        Report[]
+  viewCodes      ViewCode[]
 
   @@index([authorId])
   @@index([status, deliverAt])
@@ -132,4 +133,17 @@ model Report {
 
   @@unique([letterId, reporterKey])
   @@index([status])
+}
+
+/// Mã 6 số gửi tới email người nhận để mở thư riêng tư (lưu hash, hết hạn 10 phút).
+model ViewCode {
+  id        String   @id @default(cuid())
+  letterId  String
+  codeHash  String
+  attempts  Int      @default(0)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  letter    Letter   @relation(fields: [letterId], references: [id], onDelete: Cascade)
+
+  @@index([letterId])
 }

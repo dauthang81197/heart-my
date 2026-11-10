@@ -49,3 +49,9 @@ docker compose exec backup backup.sh list     # liệt kê các bản
 docker compose run --rm --entrypoint restore.sh backup latest heartpost_restore
 ```
 Khôi phục thật sau sự cố: dừng api (`docker compose stop api`), khôi phục vào database trống `heartpost`, rồi `docker compose up -d`. **Hãy thử khôi phục định kỳ** (vài tháng/lần) để chắc chắn bản sao lưu dùng được. Ảnh/âm thanh nằm sẵn trên R2 nên không nằm trong bản dump.
+
+## Luồng người nhận thư riêng tư
+1. Gửi thư (riêng tư / hẹn giờ) → người nhận nhận email thông báo có nút **Mở thư** (cần SMTP).
+2. Mở liên kết → màn **"Lá thư riêng tư"**: người nhận phải xác minh đúng email bằng **Google** (email Google phải trùng email người nhận) hoặc **mã 6 số** gửi tới hộp thư (hiệu lực 10 phút, tối đa 5 lần nhập sai, gửi lại sau 60 giây). Không cần tạo tài khoản. Tài khoản HeartPost đã xác minh đúng email cũng mở được, tác giả luôn xem được thư của mình.
+3. Sau khi xác minh → phong bì đóng, chạm để mở, lá thư cùng ảnh và băng ghi âm lấp ló; thanh dưới gồm 3 tab: **Thư** (chạm lá thư để đọc), **Ảnh**, **Ghi âm**.
+Thư công khai không cần xác minh. Chạy dev với API khác cổng 3000: `API_URL=http://localhost:3999 npm run dev`.
