@@ -408,3 +408,33 @@ header.nav .btn { border-radius:99px; }
 .btn { box-shadow:0 6px 18px color-mix(in srgb,var(--acc) 22%,transparent); }
 .btn.ghost { box-shadow:none; }
 @media (max-width:860px) { .hero-r { border-left:0; border-bottom:1px solid var(--line); } }
+
+/* ===== Editor v3: stepper, chip rail, thẻ lựa chọn dạng tem ===== */
+.tabbar { gap:6px; padding:12px 12px; border-bottom:1px solid var(--line); }
+.tab { display:inline-flex; align-items:center; gap:8px; border:1px solid transparent; border-radius:99px; padding:7px 14px 7px 8px; color:var(--mut); font-weight:500; }
+.tab .tn { width:24px; height:24px; border-radius:50%; display:grid; place-items:center; font-style:normal; font-size:.78rem; font-weight:700; background:var(--bg2); border:1px solid var(--line); color:var(--mut); }
+.tab:hover { color:var(--fg); }
+.tab.on { border-color:var(--acc); background:var(--acc-soft); color:var(--fg); border-bottom-color:var(--acc); }
+.tab.on .tn { background:var(--acc); color:var(--on-acc); border-color:var(--acc); }
+
+.seg { background:none; border:0; border-radius:0; padding:0; gap:8px; margin:14px 16px 4px; }
+.seg button { flex:0 0 auto; border:1px dashed var(--line); border-radius:10px; padding:7px 13px; background:none; font-size:.84rem; }
+.seg button:hover { color:var(--fg); border-color:var(--acc2); }
+.seg button.on { border:1px solid var(--acc); background:var(--acc-soft); color:var(--acc); }
+.panel-hint { margin:6px 16px 12px; font-size:.82rem; color:var(--mut); font-style:italic; font-family:var(--serif); }
+
+.cards { grid-template-columns:repeat(auto-fill,minmax(118px,1fr)); gap:12px; } .cards.c3 { grid-template-columns:repeat(auto-fill,minmax(90px,1fr)); }
+.ocard { align-items:center; justify-content:center; text-align:center; gap:8px; min-height:104px; padding:14px 8px 10px; border-radius:6px; background:var(--bg2); border:1px solid var(--line);
+  box-shadow:0 0 0 4px var(--bg) inset, 0 0 0 5px var(--line) inset; font-size:.8rem; }
+.ocard:hover { transform:translateY(-3px) rotate(-.6deg); border-color:var(--acc2); box-shadow:0 0 0 4px var(--bg) inset, 0 0 0 5px var(--acc2) inset, 0 8px 18px #0006; }
+.ocard.on { border:1px solid var(--acc); padding:14px 8px 10px; background:var(--acc-soft); box-shadow:0 0 0 4px var(--bg) inset, 0 0 0 5px var(--acc) inset, 0 8px 22px color-mix(in srgb,var(--acc) 18%,transparent); }
+.ocard .chk { right:-7px; top:-7px; width:22px; height:22px; border-radius:50%; background:var(--acc); color:var(--on-acc); display:grid; place-items:center; font-size:.72rem; font-weight:700; }
+.ed2-prev { border-radius:28px; background:radial-gradient(circle at 50% 35%,#223056aa,transparent 65%),var(--bg3); }
+.ed2-prev.grid { background-image:radial-gradient(#ffffff10 1px,transparent 1px),radial-gradient(circle at 50% 35%,#223056aa,transparent 65%); background-size:22px 22px,auto; }
+@media (max-width:860px) {
+  .tab { padding:6px 12px 6px 6px; } .cards { grid-template-columns:repeat(3,1fr); gap:10px; } .panel-hint { display:none; }
+}
+.tabbar { flex-wrap:wrap; overflow:visible; row-gap:8px; }
+.tabbar .sendbtn { margin:0 0 0 4px; background:var(--acc); color:var(--on-acc); }
+.tabbar .tools { margin-left:auto; }
+@media (max-width:860px) { .appnav { display:none; } }

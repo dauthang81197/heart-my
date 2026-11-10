@@ -20,6 +20,12 @@ const uid = () => Math.random().toString(36).slice(2, 9);
 
 type Step = 'env' | 'seal' | 'paper' | 'content';
 const TABS: [Step, string][] = [['env', 'Phong thư'], ['seal', 'Sáp'], ['paper', 'Giấy'], ['content', 'Nội dung']];
+const HINTS: Record<Step, string> = {
+  env: 'Chọn dáng, hoạ tiết và màu cho phong thư bên ngoài.',
+  seal: 'Con dấu sáp niêm phong lá thư.',
+  paper: 'Tờ giấy bên trong: loại, hoạ tiết, màu, viền và hiệu ứng.',
+  content: 'Viết, dán sticker, thêm ảnh và lời nhắn thoại.',
+};
 const SUBS: Record<Step, [string, string][]> = {
   env: [['model', 'Mẫu mã'], ['pattern', 'Họa tiết'], ['color', 'Màu sắc']],
   seal: [['color', 'Màu sáp'], ['emblem', 'Biểu tượng']],
@@ -339,11 +345,12 @@ export default function Editor() {
       <div className="ed2-main">
         <section className="ed2-panel">
           <div className="tabbar">
-            {TABS.map(([k, n]) => <button key={k} className={'tab' + (step === k ? ' on' : '')} onClick={() => setStep(k)}>{n}</button>)}
+            {TABS.map(([k, n], i) => <button key={k} className={'tab' + (step === k ? ' on' : '')} onClick={() => setStep(k)}><i className="tn">{i + 1}</i>{n}</button>)}
             <button className="sendbtn" onClick={goSend}>✈ Gửi</button>
             <div className="tools"><button onClick={undo} disabled={!past.current.length} title="Hoàn tác">↶</button><button onClick={redo} disabled={!future.current.length} title="Làm lại">↷</button><span /><button onClick={trash} title="Xoá thư">🗑</button></div>
           </div>
           <div className="seg">{SUBS[step].map(([k, n]) => <button key={k} className={sub[step] === k ? 'on' : ''} onClick={() => setSub({ ...sub, [step]: k })}>{n}</button>)}</div>
+          <div className="panel-hint">{HINTS[step]}</div>
           <div className="panel-body">{panel}</div>
         </section>
 
