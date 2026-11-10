@@ -153,6 +153,13 @@ const LetterCanvas = forwardRef<CanvasHandle, Props>(function LetterCanvas(
     tr.current.getLayer()?.batchDraw();
   }, [selectedId, design, editable, tool]);
 
+  /** Giữ tâm đối tượng luôn nằm trong tờ giấy — thả ra ngoài sẽ bị "mất" không chọn lại được. */
+  const keepInside = (n: Konva.Node) => {
+    const b = n.getClientRect({ relativeTo: n.getLayer() as Konva.Container });
+    const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
+    const dx = cx < 0 ? -cx : cx > W ? W - cx : 0, dy = cy < 0 ? -cy : cy > H ? H - cy : 0;
+    if (dx || dy) { n.x(n.x() + dx); n.y(n.y() + dy); }
+  };
   const upd = (id: string, patch: Partial<Item>, commit = true) =>
     onChange?.({ ...design, items: design.items.map((i) => (i.id === id ? { ...i, ...patch } : i)) }, commit);
 
@@ -188,7 +195,8 @@ const LetterCanvas = forwardRef<CanvasHandle, Props>(function LetterCanvas(
             onTap: () => editable && tool === 'select' && onSelect?.(it.id),
             onDblClick: () => editable && tool === 'select' && onEdit?.(it.id), onDblTap: () => editable && tool === 'select' && onEdit?.(it.id),
             onDragStart: () => editable && tool === 'select' && onSelect?.(it.id),
-            onDragEnd: (e: any) => upd(it.id, { x: e.target.x(), y: e.target.y() }),
+            onDragMove: (e: any) => keepInside(e.target as Konva.Node),
+            onDragEnd: (e: any) => { keepInside(e.target as Konva.Node); upd(it.id, { x: e.target.x(), y: e.target.y() }); },
             onTransformEnd: (e: any) => {
               const n = e.target as Konva.Node; const sx = n.scaleX(), sy = n.scaleY();
               n.scaleX(1); n.scaleY(1);

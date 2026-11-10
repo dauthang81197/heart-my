@@ -451,3 +451,6 @@ header.nav .btn { border-radius:99px; }
 @media (max-width:860px) { .panel-hint { display:block; } .tplgrid { grid-template-columns:repeat(2,1fr); } }
 .fontchip.pre { background:#f7f2e8; border-color:#d9cdb4; } .fontchip.pre:hover { border-color:var(--acc); background:#fff; }
 .selbox { background:var(--bg2); border:1px solid var(--acc); border-radius:14px; padding:12px; margin:4px 0 12px; box-shadow:0 0 0 3px var(--acc-soft); }
+.itemrail { display:flex; gap:6px; flex-wrap:nowrap; overflow-x:auto; max-width:100%; padding:2px 2px 4px; scrollbar-width:thin; }
+.itemrail button { flex:0 0 auto; border:1px solid var(--line); background:var(--bg2); color:var(--mut); border-radius:99px; padding:4px 11px; font-size:.78rem; cursor:pointer; white-space:nowrap; }
+.itemrail button:hover { color:var(--fg); border-color:var(--acc2); } .itemrail button.on { border-color:var(--acc); background:var(--acc-soft); color:var(--acc); }

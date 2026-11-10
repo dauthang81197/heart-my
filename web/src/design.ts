@@ -107,6 +107,10 @@ function healIds(items: Item[]): Item[] {
   return items.map((it) => {
     let id = typeof it.id === 'string' && it.id && !seen.has(it.id) ? it.id : '';
     while (!id || seen.has(id)) id = 'i' + Math.random().toString(36).slice(2, 9);
-    seen.add(id); return id === it.id ? it : { ...it, id };
+    seen.add(id);
+    // kéo thả ra ngoài giấy từng làm đối tượng "mất": kéo lại vào trong
+    const out = it.type !== 'line' && (it.x < -40 || it.x > W - 30 || it.y < -40 || it.y > H - 30);
+    const fix = out ? { x: Math.min(Math.max(it.x, 10), W - 120), y: Math.min(Math.max(it.y, 10), H - 120) } : {};
+    return id === it.id && !out ? it : { ...it, id, ...fix };
   });
 }

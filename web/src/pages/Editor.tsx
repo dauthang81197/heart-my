@@ -404,6 +404,11 @@ export default function Editor() {
                       <button className="del" title="Xoá (phím Delete)" onClick={delSel}>🗑 Xoá</button>
                     </> : <span className="st-name">Bấm vào sticker/chữ trên giấy để sửa, kéo để di chuyển</span>}
                   </div>
+                  {(() => { const cur = Math.min(pg, pageCount(design) - 1); const list = design.items.filter((x) => (x.page ?? 0) === cur); return list.length > 0 && (
+                    <div className="itemrail" title="Danh sách đối tượng trên giấy — bấm để chọn (kể cả khi bị che hoặc nằm lẫn)">
+                      {list.map((x) => <button key={x.id} className={x.id === sel ? 'on' : ''} onClick={() => { setSel(x.id); setTool('select'); }}>
+                        {x.type === 'text' ? '𝐓 ' + (x.text ?? '').replace(/\s+/g, ' ').slice(0, 10) : x.type === 'sticker' ? (x.text ?? '').slice(0, 12) : x.type === 'tape' ? '▭ Băng dính' : x.type === 'image' ? '🖼 Ảnh' : '✏️ Nét vẽ'}</button>)}
+                    </div>); })()}
                   <LetterCanvas design={design} width={cw} page={Math.min(pg, pageCount(design) - 1)} editable tool={tool} brush={brush} selectedId={sel} onSelect={setSel} onEdit={editItem} onChange={onCanvas} />
                 </div>
               : <div style={{ marginTop: open ? envSize * 0.45 : 0, transition: 'margin .5s' }}><Envelope design={design} open={open} pulled={pulled} size={envSize} paper={paperEl} onClick={() => { if (pulled) setPulled(false); else setOpen(!open); }} onPaperClick={() => setPulled(!pulled)} /></div>}
