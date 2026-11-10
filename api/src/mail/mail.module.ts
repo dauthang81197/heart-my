@@ -18,8 +18,10 @@ export class MailService {
   }
 
   letterReceived(to: string, from: string, link: string) {
-    return this.send(to, `${from} đã gửi bạn một lá thư`,
-      `<div style="font-family:sans-serif"><h2>Bạn có một lá thư từ ${from}</h2><p><a href="${link}">Mở phong bì</a></p></div>`);
+    const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+    const name = esc(from).slice(0, 80);
+    return this.send(to, `${from.replace(/[\r\n]/g, ' ').slice(0, 80)} đã gửi bạn một lá thư`,
+      `<div style="font-family:sans-serif"><h2>Bạn có một lá thư từ ${name}</h2><p><a href="${esc(link)}">Mở phong bì</a></p></div>`);
   }
 }
 @Global()

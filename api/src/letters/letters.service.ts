@@ -3,6 +3,8 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { LetterStatus, LetterType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.module';
 import { MailService } from '../mail/mail.module';
+import { randomBytes } from 'crypto';
+import { sanitizeDesign } from '../common/design';
 
 @Injectable()
 export class LettersService {
@@ -16,7 +18,7 @@ export class LettersService {
   }
 
   create(userId: string, type: LetterType) {
-    return this.prisma.letter.create({ data: { authorId: userId, type } });
+    return this.prisma.letter.create({ data: { authorId: userId, type, shareToken: randomBytes(16).toString('hex') } });
   }
 
   list(userId: string) {
@@ -25,9 +27,12 @@ export class LettersService {
     });
   }
 
-  async inbox(email: string) {
+  /** Chỉ tài khoản đã xác minh email (đăng nhập Google) mới xem được hộp thư nhận, tránh đăng ký bằng email người khác để đọc thư. */
+  async inbox(userId: string) {
+    const u = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!u?.emailVerified) return [];
     return this.prisma.letter.findMany({
-      where: { recipientEmail: email.toLowerCase(), status: LetterStatus.SENT },
+      where: { recipientEmail: u.email.toLowerCase(), status: LetterStatus.SENT },
       orderBy: { sentAt: 'desc' }, include: { author: { select: { name: true, avatar: true } }, stamp: true },
     });
   }
@@ -37,6 +42,7 @@ export class LettersService {
   async update(userId: string, id: string, data: Prisma.LetterUncheckedUpdateInput) {
     const l = await this.own(userId, id);
     if (l.status !== LetterStatus.DRAFT) throw new BadRequestException('Thư đã gửi, không thể sửa');
+    if (data.design && typeof data.design === 'object') data = { ...data, design: sanitizeDesign(data.design as Record<string, any>) as Prisma.InputJsonValue };
     return this.prisma.letter.update({ where: { id }, data });
   }
 
@@ -56,6 +62,9 @@ export class LettersService {
       if (!l.deliverAt || l.deliverAt.getTime() < Date.now() + 60_000) throw new BadRequestException('Ngày gửi phải ở tương lai');
     }
     const updated = await this.prisma.$transaction(async (tx) => {
+      // Chốt trạng thái trước (chống bấm gửi 2 lần cùng lúc làm trừ tem hai lần)
+      const lock = await tx.letter.updateMany({ where: { id, status: LetterStatus.DRAFT }, data: { updatedAt: new Date() } });
+      if (lock.count === 0) throw new BadRequestException('Thư đã được gửi');
       const r = await tx.userStamp.updateMany({
         where: { userId, stampId, quantity: { gt: 0 } }, data: { quantity: { decrement: 1 } },
       });
@@ -90,10 +99,11 @@ export class LettersService {
 
   async viewByToken(token: string) {
     const l = await this.prisma.letter.findUnique({
-      where: { shareToken: token }, include: { author: { select: { name: true, avatar: true } }, stamp: true },
+      where: { shareToken: token },
+      select: { shareToken: true, status: true, type: true, title: true, envelope: true, design: true, sentAt: true, author: { select: { name: true, avatar: true } }, stamp: true },
     });
     if (!l || l.status !== LetterStatus.SENT) throw new NotFoundException('Thư không tồn tại hoặc chưa đến ngày gửi');
-    return l;
+    return l; // không trả email người nhận / id tác giả
   }
 
   /** Mỗi phút: giao các thư hẹn giờ đã đến hạn. */

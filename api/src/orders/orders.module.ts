@@ -3,6 +3,7 @@ import {
   Module, NotFoundException, Param, Post, UseGuards,
 } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import { IsInt, IsString, Max, Min } from 'class-validator';
 import { OrderStatus } from '@prisma/client';
 import { randomBytes, timingSafeEqual } from 'crypto';
@@ -83,7 +84,7 @@ export class OrdersService {
 class OrdersController {
   constructor(private svc: OrdersService) {}
 
-  @Post() @UseGuards(JwtGuard)
+  @Post() @UseGuards(JwtGuard) @Throttle({ default: { limit: 20, ttl: 60_000 } })
   create(@CurrentUser() u: { sub: string }, @Body() d: CreateOrderDto) { return this.svc.create(u.sub, d.stampId, d.quantity); }
 
   @Get(':id') @UseGuards(JwtGuard)
@@ -98,7 +99,7 @@ class OrdersController {
   }
 
   /** SePay webhook – cấu hình header `Authorization: Apikey <SEPAY_API_KEY>` trên SePay. */
-  @Post('webhook/sepay') @HttpCode(200)
+  @Post('webhook/sepay') @HttpCode(200) @SkipThrottle()
   async sepay(@Headers('authorization') auth: string | undefined, @Body() b: any) {
     const expected = Buffer.from(`Apikey ${process.env.SEPAY_API_KEY ?? ''}`);
     const got = Buffer.from(auth ?? '');

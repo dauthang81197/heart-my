@@ -32,6 +32,7 @@ model User {
   avatar       String?
   passwordHash String?
   googleId     String?  @unique
+  emailVerified Boolean @default(false)
   locale       String   @default("vi")
   role         String   @default("USER")
   createdAt    DateTime @default(now())

@@ -9,7 +9,7 @@ async function main() {
     { id: 'stamp-rose', name: 'Hồng đỏ', image: '🌹', color: '#a52a3a', price: 10000 },
   ];
   for (const s of stamps) {
-    await prisma.stamp.upsert({ where: { id: s.id }, update: s, create: s });
+    await prisma.stamp.upsert({ where: { id: s.id }, update: {}, create: s });
   }
 }
 main().finally(() => prisma.$disconnect());

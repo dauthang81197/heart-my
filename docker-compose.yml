@@ -17,6 +17,7 @@ services:
       DATABASE_URL: postgresql://heartpost:${DB_PASSWORD}@db:5432/heartpost
       NODE_ENV: production
     volumes: [uploads:/app/uploads]
+    healthcheck: { test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health || exit 1"], interval: 30s, timeout: 5s, retries: 5, start_period: 40s }
     depends_on: { db: { condition: service_healthy } }
   web:
     image: ${DOCKERHUB_USERNAME:-local}/heartpost-web:${IMAGE_TAG:-latest}

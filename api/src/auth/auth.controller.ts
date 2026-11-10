@@ -1,4 +1,5 @@
 import { Body, Controller, Post } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { IsEmail, IsString, MinLength } from 'class-validator';
 import { AuthService } from './auth.service';
 
@@ -7,6 +8,7 @@ class LoginDto { @IsEmail() email: string; @IsString() password: string; }
 class GoogleDto { @IsString() credential: string; }
 
 @Controller('auth')
+@Throttle({ default: { limit: 10, ttl: 60_000 } }) // chống dò mật khẩu / spam đăng ký
 export class AuthController {
   constructor(private auth: AuthService) {}
   @Post('register') register(@Body() d: RegisterDto) { return this.auth.register(d.email, d.password, d.name); }

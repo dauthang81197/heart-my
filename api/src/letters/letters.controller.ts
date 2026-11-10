@@ -26,7 +26,7 @@ export class LettersController {
 
   // --- cần đăng nhập ---
   @Get() @UseGuards(JwtGuard) list(@CurrentUser() u: { sub: string }) { return this.svc.list(u.sub); }
-  @Get('inbox') @UseGuards(JwtGuard) inbox(@CurrentUser() u: { email: string }) { return this.svc.inbox(u.email); }
+  @Get('inbox') @UseGuards(JwtGuard) inbox(@CurrentUser() u: { sub: string }) { return this.svc.inbox(u.sub); }
   @Post() @UseGuards(JwtGuard) create(@CurrentUser() u: { sub: string }, @Body() d: CreateDto) { return this.svc.create(u.sub, d.type); }
   @Get(':id') @UseGuards(JwtGuard) get(@CurrentUser() u: { sub: string }, @Param('id') id: string) { return this.svc.get(u.sub, id); }
   @Patch(':id') @UseGuards(JwtGuard)

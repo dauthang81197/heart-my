@@ -79,12 +79,13 @@ export function normalizeDesign(raw: any, legacyEnvelope?: string): Design {
     env: { ...d.env, ...(legacyEnvelope && LEGACY_ENV[legacyEnvelope] ? { color: LEGACY_ENV[legacyEnvelope] } : {}), ...(raw.env ?? {}) },
     seal: { ...d.seal, ...(raw.seal ?? {}) },
     paper: { ...d.paper, ...(raw.paper ?? {}) },
-    items: Array.isArray(raw.items) ? raw.items : [],
+    items: Array.isArray(raw.items) ? raw.items.filter((it: any) => it && (it.type !== 'image' || safeUrl(it.src))) : [],
     pageInk: Array.isArray(raw.pageInk) ? raw.pageInk.map((c: unknown) => (typeof c === 'string' ? c : null)) : [],
-    pages: Array.isArray(raw.pages) ? raw.pages.filter((u: unknown) => typeof u === 'string') : [],
-    images: Array.isArray(raw.images) ? raw.images : [],
-    audios: Array.isArray(raw.audios) ? raw.audios : [],
+    pages: Array.isArray(raw.pages) ? raw.pages.filter(safeUrl) : [],
+    images: Array.isArray(raw.images) ? raw.images.filter(safeUrl) : [],
+    audios: Array.isArray(raw.audios) ? raw.audios.filter((a: any) => a && safeUrl(a.url)) : [],
   };
 }
 export const pageCount = (d: { pages?: string[] }) => Math.max(1, d.pages?.length ?? 0);
+const safeUrl = (u: unknown): u is string => typeof u === 'string' && /^(https?:\/\/|\/uploads\/)/i.test(u);
 export const nameOf = (list: { k?: string; c?: string; n: string }[], v: string) => list.find((x) => x.k === v || x.c === v)?.n ?? '—';

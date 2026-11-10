@@ -65,7 +65,7 @@ function Vault() {
         {([['mine', 'Thư của tôi'], ['inbox', 'Thư nhận'], ['public', 'Tường thư']] as const).map(([k, n]) => <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{n}</button>)}
       </div>
       {tab === 'mine' && <LetterGrid letters={mine} onDelete={(id) => api(`/letters/${id}`, { method: 'DELETE' }).then(load)} />}
-      {tab === 'inbox' && <LetterGrid letters={inbox} onDelete={() => {}} />}
+      {tab === 'inbox' && <>{!inbox.length && <p className="muted">Hộp thư nhận chỉ hiện với tài khoản đã xác minh email. Hãy đăng nhập bằng Google để xem thư gửi tới email của bạn.</p>}<LetterGrid letters={inbox} onDelete={() => {}} /></>}
       {tab === 'public' && <LetterGrid letters={feed} onDelete={() => {}} />}
     </>
   );
