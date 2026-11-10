@@ -31,3 +31,21 @@ Webhook URL: `https://<domain>/api/orders/webhook/sepay`, kiểu xác thực API
 - **Email (SMTP):** cần cấu hình `SMTP_*` để gửi thư thông báo, xác minh email và quên mật khẩu. Chưa cấu hình thì các email này chỉ được ghi cảnh báo vào log.
 - **Test:** `cd api && npm test` (chạy cả trong CI trước khi build image).
 - **Nội dung pháp lý:** chỉnh email liên hệ trong `web/src/pages/Legal.tsx` và nhờ người có chuyên môn rà soát Điều khoản/Chính sách trước khi mở rộng.
+
+## Sao lưu & khôi phục database
+Container `backup` chạy `pg_dump` mỗi đêm (mặc định 2h sáng, giờ VN), nén gzip, (tuỳ chọn) mã hoá AES-256 rồi đẩy lên bucket R2 **riêng tư** `R2_BACKUP_BUCKET`, giữ `BACKUP_RETENTION_DAYS` ngày. Khi container khởi động nó chạy thử 1 lần để phát hiện sai cấu hình sớm.
+
+Thiết lập một lần:
+1. Cloudflare → R2 → **Create bucket** `heartpost-backups` — **không bật Public access**.
+2. API token R2 đang dùng phải được cấp quyền **Object Read & Write** cho cả bucket này (Manage API tokens → sửa token → thêm bucket).
+3. Thêm vào `.env` trên VPS: `R2_BACKUP_BUCKET`, `BACKUP_PASSPHRASE` (khuyến nghị; **cất passphrase ở nơi an toàn khác VPS**), rồi `docker compose up -d`.
+4. Kiểm tra: `docker compose logs backup --tail 20` phải thấy dòng `OK db/hp-….sql.gz`.
+
+Lệnh hữu ích (trong thư mục triển khai trên VPS):
+```bash
+docker compose exec backup backup.sh once     # sao lưu ngay
+docker compose exec backup backup.sh list     # liệt kê các bản
+# Khôi phục bản mới nhất vào database MỚI để kiểm tra (không đụng dữ liệu đang chạy):
+docker compose run --rm --entrypoint restore.sh backup latest heartpost_restore
+```
+Khôi phục thật sau sự cố: dừng api (`docker compose stop api`), khôi phục vào database trống `heartpost`, rồi `docker compose up -d`. **Hãy thử khôi phục định kỳ** (vài tháng/lần) để chắc chắn bản sao lưu dùng được. Ảnh/âm thanh nằm sẵn trên R2 nên không nằm trong bản dump.

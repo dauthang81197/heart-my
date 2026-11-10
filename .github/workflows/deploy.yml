@@ -7,6 +7,7 @@ on:
 env:
   API_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/heartpost-api
   WEB_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/heartpost-web
+  BACKUP_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/heartpost-backup
 
 jobs:
   build:
@@ -44,6 +45,17 @@ jobs:
             ${{ env.API_IMAGE }}:${{ github.sha }}
           cache-from: type=gha,scope=api
           cache-to: type=gha,scope=api,mode=max
+      - name: Build & push Backup
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backup
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.BACKUP_IMAGE }}:latest
+            ${{ env.BACKUP_IMAGE }}:${{ github.sha }}
+          cache-from: type=gha,scope=backup
+          cache-to: type=gha,scope=backup,mode=max
       - name: Build & push Web
         uses: docker/build-push-action@v6
         with:
@@ -87,6 +99,6 @@ jobs:
             cd ${{ secrets.VPS_PATH }}
             echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             export DOCKERHUB_USERNAME IMAGE_TAG
-            docker compose pull api web
+            docker compose pull api web backup
             docker compose up -d --remove-orphans
             docker image prune -f
