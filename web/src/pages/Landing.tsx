@@ -42,6 +42,7 @@ export default function Landing() {
       </header>
       <section className="hero">
         <div className="hero-l">
+          <span className="eyebrow">✦ {lang === 'vi' ? 'Thư tay kỹ thuật số' : 'Handwritten digital letters'}</span>
           <h1>{t('h1a')}<span>{t('h1b')}</span></h1>
           <p>{t('sub')}</p>
           <div><button className="btn" onClick={go}>{t('start')} →</button></div>
