@@ -15,6 +15,7 @@ export type Design = {
   env: EnvDesign; seal: Seal; paper: PaperDesign; items: Item[];
   pageInk: (string | null)[]; // màu mực đổi lại cho từng trang (null = màu gốc)
   pages: string[]; // ảnh chữ viết tay, mỗi ảnh là 1 trang (PNG đã fit khổ giấy)
+  effect?: string; // hiệu ứng hạt khi người nhận mở thư
   images: string[]; audios: { url: string; duration: number }[];
 };
 
@@ -65,6 +66,11 @@ export const PAPER_FX = [
   { k: 'none', n: 'Không' }, { k: 'aged', n: 'Ố vàng cổ' }, { k: 'coffee', n: 'Vết cà phê' }, { k: 'foxing', n: 'Đốm thời gian' },
   { k: 'grain', n: 'Hạt giấy' }, { k: 'crumple', n: 'Nhàu nếp' }, { k: 'wash', n: 'Màu nước' }, { k: 'glitter', n: 'Nhũ lấp lánh' },
 ];
+export const EFFECTS = [
+  { k: 'none', n: 'Không có', icon: '—' }, { k: 'hearts', n: 'Tim bay', icon: '💗' }, { k: 'petals', n: 'Cánh hoa rơi', icon: '🌸' },
+  { k: 'confetti', n: 'Pháo giấy', icon: '🎊' }, { k: 'snow', n: 'Tuyết rơi', icon: '❄️' }, { k: 'stars', n: 'Sao lấp lánh', icon: '✨' },
+  { k: 'bubbles', n: 'Bong bóng', icon: '🫧' }, { k: 'fireflies', n: 'Đom đóm', icon: '🪲' }, { k: 'sparkle', n: 'Kim tuyến vàng', icon: '⭐' },
+];
 export const PAPER_COLORS = [
   { n: 'Ngà Trắng', c: '#f7f2e8' }, { n: 'Trắng Tinh', c: '#ffffff' }, { n: 'Hồng Nhạt', c: '#fdf0f3' },
   { n: 'Xanh Sương', c: '#eef3f7' }, { n: 'Xanh Lá Nhạt', c: '#f0f5ec' }, { n: 'Vàng Bơ', c: '#fff6dd' },
@@ -79,7 +85,7 @@ export const defaultDesign = (): Design => ({
   env: { model: 'classic', pattern: 'none', color: ENV_COLORS[0].c },
   seal: { color: SEAL_COLORS[1].c, emblem: '❤' },
   paper: { kind: 'ford', color: PAPER_COLORS[0].c, pattern: 'lined', border: 'none', borderColor: BORDER_COLORS[0], fx: 'none' },
-  items: [], pages: [], pageInk: [], images: [], audios: [],
+  items: [], pages: [], pageInk: [], images: [], audios: [], effect: 'none',
 });
 
 /** Chuẩn hoá design từ server (có thể thiếu field / định dạng cũ). */
@@ -91,6 +97,7 @@ export function normalizeDesign(raw: any, legacyEnvelope?: string): Design {
     seal: { ...d.seal, ...(raw.seal ?? {}) },
     paper: { ...d.paper, ...(raw.paper ?? {}) },
     items: healIds(Array.isArray(raw.items) ? raw.items.filter((it: any) => it && (it.type !== 'image' || safeUrl(it.src))) : []),
+    effect: typeof raw.effect === 'string' && EFFECTS.some((e) => e.k === raw.effect) ? raw.effect : 'none',
     pageInk: Array.isArray(raw.pageInk) ? raw.pageInk.map((c: unknown) => (typeof c === 'string' ? c : null)) : [],
     pages: Array.isArray(raw.pages) ? raw.pages.filter(safeUrl) : [],
     images: Array.isArray(raw.images) ? raw.images.filter(safeUrl) : [],

@@ -454,3 +454,5 @@ header.nav .btn { border-radius:99px; }
 .itemrail { display:flex; gap:6px; flex-wrap:nowrap; overflow-x:auto; max-width:100%; padding:2px 2px 4px; scrollbar-width:thin; }
 .itemrail button { flex:0 0 auto; border:1px solid var(--line); background:var(--bg2); color:var(--mut); border-radius:99px; padding:4px 11px; font-size:.78rem; cursor:pointer; white-space:nowrap; }
 .itemrail button:hover { color:var(--fg); border-color:var(--acc2); } .itemrail button.on { border-color:var(--acc); background:var(--acc-soft); color:var(--acc); }
+.fxlayer { position:fixed; inset:0; pointer-events:none; z-index:36; }
+.fxlayer.in { position:absolute; z-index:4; border-radius:inherit; }

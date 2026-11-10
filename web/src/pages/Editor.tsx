@@ -2,7 +2,7 @@ import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api, Letter, uploadFile } from '../api';
 import {
-  BORDER_COLORS, Design, ENV_COLORS, ENV_PATTERNS, Item, MODELS, nameOf, normalizeDesign, PAPER_BORDERS, PAPER_COLORS, PAPER_FX, PAPER_KINDS, PAPER_PATTERNS,
+  BORDER_COLORS, Design, EFFECTS, ENV_COLORS, ENV_PATTERNS, Item, MODELS, nameOf, normalizeDesign, PAPER_BORDERS, PAPER_COLORS, PAPER_FX, PAPER_KINDS, PAPER_PATTERNS,
   SEAL_COLORS, SEAL_EMBLEMS, W, pageCount,
 } from '../design';
 import LetterCanvas from '../components/LetterCanvas';
@@ -12,6 +12,7 @@ import AudioRecorder from '../components/AudioRecorder';
 import { MAX_BYTES, MAX_PAGES, processHandwriting } from '../handwriting';
 import { Spinner, useUI } from '../components/UI';
 import { TEMPLATES, Template } from '../templates';
+import Particles from '../components/Particles';
 import { tapeTile } from '../components/paperDeco';
 import { FONT_GROUPS, loadRecent, Preset, PRESET_GROUPS, pushRecent, STICKER_PACKS, TAPE_COLORS, TAPE_PATTERNS } from '../stickers';
 
@@ -31,7 +32,7 @@ const SUBS: Record<Step, [string, string][]> = {
   env: [['model', 'Mẫu mã'], ['pattern', 'Họa tiết'], ['color', 'Màu sắc']],
   seal: [['color', 'Màu sáp'], ['emblem', 'Biểu tượng']],
   paper: [['kind', 'Loại giấy'], ['pattern', 'Họa tiết'], ['color', 'Màu giấy'], ['border', 'Viền'], ['fx', 'Hiệu ứng']],
-  content: [['hand', 'Chữ viết tay'], ['text', 'Soạn thảo'], ['sticker', 'Sticker'], ['deco', 'Băng dính'], ['photos', 'Ảnh đính kèm'], ['audio', 'Ghi âm']],
+  content: [['hand', 'Chữ viết tay'], ['text', 'Soạn thảo'], ['sticker', 'Sticker'], ['deco', 'Băng dính'], ['photos', 'Ảnh đính kèm'], ['audio', 'Ghi âm'], ['effect', 'Hiệu ứng']],
 };
 
 function Card({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) {
@@ -52,6 +53,7 @@ export default function Editor() {
   const [handBusy, setHandBusy] = useState('');
   const [pulled, setPulled] = useState(false);
   const [tplOpen, setTplOpen] = useState(false);
+  const [burst, setBurst] = useState(0);
   const [pack, setPack] = useState('love');
   const [glyphColor, setGlyphColor] = useState('#c9788a');
   const [tapeK, setTapeK] = useState('stripes');
@@ -298,6 +300,13 @@ export default function Editor() {
       </>}
     </div>;
 
+    if (s === 'effect') return (
+      <div className="pad">
+        <p className="muted">Hiệu ứng chuyển động xuất hiện khi người nhận mở phong thư. Bạn xem thử ngay ở khung bên phải.</p>
+        <div className="cards">{EFFECTS.map((m) => <Card key={m.k} on={(design.effect ?? 'none') === m.k} onClick={() => { set({ effect: m.k }); setBurst((b) => b + 1); }}><span style={{ fontSize: '1.8rem' }}>{m.icon}</span><span>{m.n}</span></Card>)}</div>
+        {(design.effect ?? 'none') !== 'none' && <button className="btn ghost sm" style={{ marginTop: 14 }} onClick={() => setBurst((b) => b + 1)}>▶ Phát lại</button>}
+        <p className="muted" style={{ fontSize: '.8rem', marginTop: 14 }}>Khi mở thư, các sticker và chữ cũng hiện dần từng cái một. Người dùng bật “giảm chuyển động” trên thiết bị sẽ không thấy hiệu ứng.</p>
+      </div>);
     if (s === 'sticker') {
       const cur = pack === 'recent' ? null : STICKER_PACKS.find((x) => x.k === pack) ?? STICKER_PACKS[0];
       const list = cur ? cur.items : recent;
@@ -382,6 +391,7 @@ export default function Editor() {
         </section>
 
         <section ref={prev} className={'ed2-prev' + (full ? ' full' : '') + (grid ? ' grid' : '') + (step === 'content' ? ' content' : '')}>
+          {(design.effect ?? 'none') !== 'none' && (step === 'content' && sub.content === 'effect') && <Particles effect={design.effect!} burst={burst} contained />}
           <div className="side-tools">
             <button title="Toàn màn hình" onClick={() => setFull(!full)}>⤢</button>
             {step !== 'content' && <>

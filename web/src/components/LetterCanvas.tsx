@@ -127,18 +127,30 @@ function Img({ item, ...rest }: { item: Item } & any) {
 export type CanvasHandle = { toDataURL: () => string };
 
 type Props = {
-  design: Design; width: number; page?: number; editable?: boolean; tool?: 'select' | 'draw';
+  design: Design; width: number; reveal?: boolean; page?: number; editable?: boolean; tool?: 'select' | 'draw';
   brush?: { color: string; size: number }; selectedId?: string | null;
   onSelect?: (id: string | null) => void; onEdit?: (id: string) => void; onChange?: (d: Design, commit: boolean) => void;
 };
 
 const LetterCanvas = forwardRef<CanvasHandle, Props>(function LetterCanvas(
-  { design, width, page = 0, editable, tool = 'select', brush, selectedId, onSelect, onEdit, onChange }, ref) {
+  { design, width, reveal, page = 0, editable, tool = 'select', brush, selectedId, onSelect, onEdit, onChange }, ref) {
   const scale = width / W;
   const stage = useRef<Konva.Stage>(null);
   const tr = useRef<Konva.Transformer>(null);
   const drawing = useRef(false);
   useImperativeHandle(ref, () => ({ toDataURL: () => stage.current!.toDataURL({ pixelRatio: 1 / scale }) }));
+
+  useEffect(() => { // hiệu ứng hiện dần từng đối tượng (chỉ ở màn người nhận)
+    if (!reveal || !stage.current || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const st = stage.current; const tws: Konva.Tween[] = []; const timers: number[] = [];
+    design.items.filter((it) => (it.page ?? 0) === page).forEach((it, i) => {
+      const n = st.findOne('#' + it.id); if (!n) return;
+      const o = it.opacity ?? 1, y = n.y(); n.opacity(0); n.y(y + 18);
+      const tw = new Konva.Tween({ node: n, duration: 0.6, opacity: o, y, easing: Konva.Easings.EaseOut }); tws.push(tw);
+      timers.push(window.setTimeout(() => tw.play(), 350 + i * 160));
+    });
+    return () => { timers.forEach(clearTimeout); tws.forEach((t) => t.destroy()); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { // vẽ lại khi web font tải xong
     const redraw = () => stage.current?.batchDraw();

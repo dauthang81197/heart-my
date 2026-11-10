@@ -5,6 +5,7 @@ import { GoogleLogin } from '@react-oauth/google';
 import { api, Letter } from '../api';
 import Envelope from '../components/Envelope';
 import LetterCanvas from '../components/LetterCanvas';
+import Particles from '../components/Particles';
 import { Design, normalizeDesign, pageCount, W } from '../design';
 import { Spinner, useUI } from '../components/UI';
 import { useI18n } from '../i18n';
@@ -153,6 +154,7 @@ function Viewer({ l, token }: { l: Letter; token: string }) {
   return (
     <div className="vw">
       <Head />
+      {open && d.effect && d.effect !== 'none' && <Particles effect={d.effect} burst={show ? 2 : 1} />}
       <div className="vw-stage">
         <p className="muted" style={{ margin: '0 0 6px' }}>{t('fromLabel')} <b style={{ color: 'var(--fg)' }}>{l.author?.name}</b></p>
         <div style={{ display: 'grid', placeItems: 'center', margin: `${open ? es * 0.5 : 24}px 0 10px`, transition: 'margin .5s' }}>
@@ -175,7 +177,7 @@ function Viewer({ l, token }: { l: Letter; token: string }) {
           <div style={{ display: 'grid', placeItems: 'center', gap: 22 }}>
             {Array.from({ length: pageCount(d) }, (_, i) => (
               <div key={i} className="reveal" style={{ animationDelay: `${i * 0.25}s` }}>
-                <LetterCanvas design={d} width={cw} page={i} />
+                <LetterCanvas design={d} width={cw} page={i} reveal />
                 {pageCount(d) > 1 && <div className="muted" style={{ fontSize: '.8rem', margin: '8px 0 0', textAlign: 'center' }}>{i + 1}/{pageCount(d)}</div>}
               </div>))}
             {l.type === 'PUBLIC' && <ReportButton token={token} />}
